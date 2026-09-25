@@ -70,6 +70,16 @@ one name; if the board can't join, log in to the router and give the 2.4 GHz
 network its own name. Also: very long passwords with unusual characters
 occasionally trip WiFiManager — try a simpler guest network to check.
 
+**Everything is slow, "RETRYING" appears a lot, or `status` shows a weak signal
+even though the board is next to the router.**
+Type `status` in the Serial Monitor: it prints the access point the board is
+talking to and the signal in dBm (−30 is excellent, −70 is poor). Then type
+`scan`. Homes with more than one access point broadcast the same network name
+from each, and an ESP32 will happily talk to a far one. AirTraffic joins the
+strongest one at start-up and re-checks every 10 minutes when the signal is
+poor, so a restart usually fixes it; if `scan` only shows weak ones, move the
+board or the access point.
+
 **It was working and now says "Connecting to Wi-Fi" forever.**
 Router rebooted or password changed. Press and hold the screen ▸ **Wi-Fi &
 location** to set it up again. To wipe everything, in the IDE set

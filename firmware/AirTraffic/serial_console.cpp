@@ -5,6 +5,8 @@
 
 #include <stdlib.h>
 
+#include <WiFi.h>
+
 #include "app.h"
 #include "flight_feed.h"
 
@@ -82,8 +84,27 @@ void runCommand(const char* cmd, ui::Canvas& canvas) {
     const bool on = !feed::isDemo();
     feed::setDemo(on);
     Serial.printf("[console] demo mode %s\n", on ? "ON - pretend planes" : "OFF - live data");
+  } else if (strcmp(cmd, "status") == 0) {
+    const FeedStatus st = feed::status();
+    Serial.printf("[status] Wi-Fi %s to %s (AP %s, channel %d), IP %s, signal %d dBm\n",
+                  WiFi.status() == WL_CONNECTED ? "connected" : "not connected", WiFi.SSID().c_str(),
+                  WiFi.BSSIDstr().c_str(), WiFi.channel(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    Serial.printf("[status] feed: %s%s%s, source %s, %u in range, last update %lu s ago\n",
+                  feed::stateName(st.state), st.lastError[0] ? " - " : "", st.lastError,
+                  st.source[0] ? st.source : "-", static_cast<unsigned>(st.totalInRange),
+                  st.lastUpdateMs ? (millis() - st.lastUpdateMs) / 1000 : 0);
+    Serial.printf("[status] home %.4f, %.4f (%s), heap %u KB, psram %u KB\n", st.home.lat, st.home.lon,
+                  st.city, ESP.getFreeHeap() / 1024, ESP.getFreePsram() / 1024);
+  } else if (strcmp(cmd, "scan") == 0) {
+    Serial.println("[scan] looking for networks (takes a few seconds)...");
+    const int n = WiFi.scanNetworks();
+    for (int i = 0; i < n; i++) {
+      Serial.printf("[scan] %-24s %4d dBm  ch %2d  %s\n", WiFi.SSID(i).c_str(), WiFi.RSSI(i),
+                    WiFi.channel(i), WiFi.BSSIDstr(i).c_str());
+    }
+    WiFi.scanDelete();
   } else if (strcmp(cmd, "help") == 0) {
-    Serial.println("[console] commands: demo, shot, tap X Y, swipe left|right|up|down, hold, help");
+    Serial.println("[console] commands: status, scan, demo, shot, tap X Y, swipe left|right|up|down, hold, help");
   } else if (cmd[0] != '\0') {
     Serial.printf("[console] unknown command '%s' (try: help)\n", cmd);
   }

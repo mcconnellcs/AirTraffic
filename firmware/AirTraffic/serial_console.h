@@ -4,6 +4,8 @@
 //  Open Tools > Serial Monitor (115200 baud), type a word, press Enter:
 //
 //    help          list the commands
+//    status        Wi-Fi, feed state and memory in one line each
+//    scan          list the Wi-Fi networks the board can see, strongest first
 //    demo          fill the radar with pretend planes (no Wi-Fi needed); again = off
 //    shot          send a screenshot to your computer (see tools/screenshot.py)
 //    tap X Y       pretend to tap the screen at that spot

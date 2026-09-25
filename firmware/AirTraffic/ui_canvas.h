@@ -158,6 +158,13 @@ void triangle(Gfx& g, float x0, float y0, float x1, float y1, float x2, float y2
 // Mix a rectangle toward `color` by `amount` (0..1) — frosted glass, dimming.
 void blendRect(Gfx& g, int x, int y, int w, int h, uint16_t color, float amount);
 
+// Halve the brightness of a rectangle. Much cheaper than blendRect.
+void darkenRect(Gfx& g, int x, int y, int w, int h);
+
+// A filled rectangle with rounded, anti-aliased corners, drawn directly.
+// Use this instead of g.fillSmoothRoundRect() for anything drawn every frame.
+void roundedRect(Gfx& g, int x, int y, int w, int h, int radius, uint16_t color);
+
 // A rounded panel with a soft shadow and a thin highlight along the top edge.
 void glassPanel(Gfx& g, int x, int y, int w, int h, int radius, uint16_t fill);
 

@@ -60,6 +60,12 @@ nearest planes' cards one after another. Touch it to take control again.
 A plane pulsing **red** is squawking an emergency code (7500, 7600 or 7700).
 That's rare, and usually a test or a mistake, but it's real data.
 
+## Something not right?
+
+Open **Tools ▸ Serial Monitor** (115200 baud) and type `status`. It tells you
+which Wi-Fi access point the board is on, how strong the signal is, and what
+the flight feed is doing. `help` lists the other commands.
+
 ## No Wi-Fi handy? Try the demo
 
 Open **Tools ▸ Serial Monitor** (115200 baud), type `demo` and press Enter. The

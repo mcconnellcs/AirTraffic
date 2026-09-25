@@ -36,12 +36,21 @@ constexpr int PIN_BACKLIGHT = 38;
 // Touch is turned the same way. Change this if your stand holds it sideways.
 constexpr int SCREEN_ROTATION = 3;
 
+// The screen driver, plus one extra door: the strip copier (ui_canvas.cpp)
+// writes straight into the screen's picture memory, row by row, which is
+// faster than going through the library for every block.
+struct Panel : public lgfx::Panel_ST7701_guition_esp32_4848S040 {
+  uint16_t* row(int y) { return reinterpret_cast<uint16_t*>(_lines_buffer[y]); }
+};
+
 class LGFX : public lgfx::LGFX_Device {
   lgfx::Bus_RGB      bus_;
-  lgfx::Panel_ST7701_guition_esp32_4848S040 panel_;
+  Panel              panel_;
   lgfx::Touch_GT911  touch_;
 
  public:
+  Panel& panel() { return panel_; }
+
   LGFX() {
     {  // --- The picture area ---
       auto cfg = panel_.config();

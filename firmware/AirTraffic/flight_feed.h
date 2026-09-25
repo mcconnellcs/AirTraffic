@@ -59,6 +59,7 @@ bool isDemo();
 bool latest(uint32_t lastSequence, Snapshot* out);
 
 FeedStatus status();
+const char* stateName(FeedState state);
 
 // Ask for route/aircraft/photo details. `focus` = the plane being viewed now.
 void wantDetails(const char* hex, const char* callsign, bool focus);

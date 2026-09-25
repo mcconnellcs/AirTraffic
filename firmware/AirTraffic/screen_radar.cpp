@@ -24,6 +24,7 @@ constexpr float kPi = 3.14159265f;
 constexpr int kSweepSlices = 28;         // how many wedges make the fading tail
 constexpr float kSweepTailDeg = 50.0f;   // how long the tail is
 constexpr int kMaxLabels = 9;            // name tags on the nearest planes only
+constexpr size_t kMaxTrails = 24;        // contrails on the nearest planes only (they cost the most)
 constexpr int kRangeButtonX = 14, kRangeButtonY = 424, kRangeButtonW = 96, kRangeButtonH = 44;
 
 Layer radarLayer;  // the background, drawn once
@@ -272,7 +273,7 @@ void drawRadar(Gfx& g, const UiState& s) {
     drawSweep(g, s.sweepDeg);
     drawRangeLabels(g);
     drawHome(g, s.now);
-    for (const Blip& b : s.blips) drawTrail(g, b);
+    for (size_t i = 0; i < s.blips.size() && i < kMaxTrails; i++) drawTrail(g, s.blips[i]);
     for (auto it = s.blips.rbegin(); it != s.blips.rend(); ++it) drawBlip(g, *it, s.now);
     for (const Blip& b : s.blips) {
       if (b.labelled) drawLabel(g, b);

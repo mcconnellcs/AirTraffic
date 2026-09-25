@@ -46,7 +46,7 @@ void drawPhotoBox(Gfx& g, const UiState& s, const Flight& f, int x, int y) {
     return;
   }
   // No photo (yet): a big plane silhouette and the type code instead.
-  g.fillSmoothRoundRect(x, y, kPhotoW, kPhotoH, 12, theme::kSurfaceHi);
+  roundedRect(g, x, y, kPhotoW, kPhotoH, 12, theme::kSurfaceHi);
   const uint16_t c = theme::kAltitude[fmt::altitudeBand(f.altFt, f.onGround)];
   planeIcon(g, x + kPhotoW / 2, y + 42, 45, 52, anim::blend565(theme::kSurfaceHi, c, 0.8f));
   text(g, f.type[0] ? f.type : "----", x + kPhotoW / 2, y + 74, theme::Font::Hud, theme::kTextDim,
@@ -97,6 +97,11 @@ struct Stat {
   int trend;  // -1/0/+1 arrow, or 2 = none
 };
 
+void buildStatsImpl(const UiState& s, const Flight& f, geo::LatLon pos, Stat* stats);
+inline void buildStats(const UiState& s, const Flight& f, geo::LatLon pos, Stat* stats) {
+  buildStatsImpl(s, f, pos, stats);
+}
+
 void drawStat(Gfx& g, const Stat& st, int x, int y) {
   if (!rowsVisible(g, y, 56)) return;
   text(g, st.label, x, y, theme::Font::Label, theme::kTextMuted);
@@ -105,6 +110,22 @@ void drawStat(Gfx& g, const Stat& st, int x, int y) {
 }
 
 void drawStats(Gfx& g, const UiState& s, const Flight& f, geo::LatLon pos, int y) {
+  // The six boxes are worked out once per frame (this runs once per strip).
+  static Stat stats[6];
+  static uint32_t builtForMs = 0;
+  static char builtForHex[8] = "";
+  if (builtForMs != s.now || strcmp(builtForHex, f.hex) != 0) {
+    buildStats(s, f, pos, stats);
+    builtForMs = s.now;
+    strncpy(builtForHex, f.hex, sizeof(builtForHex) - 1);
+  }
+  const int colW = (SCREEN_W - 2 * kPad) / 3;
+  for (int i = 0; i < 6; i++) {
+    drawStat(g, stats[i], kPad + (i % 3) * colW, y + (i / 3) * 62);
+  }
+}
+
+void buildStatsImpl(const UiState& s, const Flight& f, geo::LatLon pos, Stat* stats) {
   const fmt::Units u = s.settings.units;
   const float dist = static_cast<float>(geo::distanceNm(s.home, pos));
   const float brg = static_cast<float>(geo::bearingDeg(s.home, pos));
@@ -117,18 +138,12 @@ void drawStats(Gfx& g, const UiState& s, const Flight& f, geo::LatLon pos, int y
   fmt::Label dstDir = fmt::Label::printf("%s %s", dst.c_str(), geo::cardinal(brg));
   const bool emergency = fmt::isEmergencySquawk(f.squawk);
 
-  const Stat stats[6] = {
-      {"ALTITUDE", alt, altColor, trend},
-      {"SPEED", spd, theme::kText, 2},
-      {"DISTANCE", dstDir, theme::kText, 2},
-      {"HEADING", f.hasTrack ? fmt::heading(f.trackDeg) : fmt::Label::printf("---"), theme::kText, 2},
-      {"CLIMB", fmt::verticalRate(f.vrateFpm, u), trend > 0 ? theme::kAccent : trend < 0 ? theme::kWarning : theme::kText, 2},
-      {"SQUAWK", fmt::Label::printf("%s", f.squawk[0] ? f.squawk : "----"), emergency ? theme::kEmergency : theme::kText, 2},
-  };
-  const int colW = (SCREEN_W - 2 * kPad) / 3;
-  for (int i = 0; i < 6; i++) {
-    drawStat(g, stats[i], kPad + (i % 3) * colW, y + (i / 3) * 62);
-  }
+  stats[0] = {"ALTITUDE", alt, altColor, trend};
+  stats[1] = {"SPEED", spd, theme::kText, 2};
+  stats[2] = {"DISTANCE", dstDir, theme::kText, 2};
+  stats[3] = {"HEADING", f.hasTrack ? fmt::heading(f.trackDeg) : fmt::Label::printf("---"), theme::kText, 2};
+  stats[4] = {"CLIMB", fmt::verticalRate(f.vrateFpm, u), trend > 0 ? theme::kAccent : trend < 0 ? theme::kWarning : theme::kText, 2};
+  stats[5] = {"SQUAWK", fmt::Label::printf("%s", f.squawk[0] ? f.squawk : "----"), emergency ? theme::kEmergency : theme::kText, 2};
 }
 
 }  // namespace
@@ -144,9 +159,13 @@ void drawCard(Gfx& g, const UiState& s) {
   // (Only the rows above the card are dimmed: the card covers the rest, and
   // blending the whole screen every frame is slow.)
   const int top = kCardTop + static_cast<int>((SCREEN_H - kCardTop) * (1.0f - s.cardOpen));
-  blendRect(g, 0, 0, SCREEN_W, top + 8, theme::kBackground, 0.55f * s.cardOpen);
+  if (s.cardOpen >= 0.999f) {
+    darkenRect(g, 0, 0, SCREEN_W, top + 8);  // fully open: the fast way
+  } else {
+    blendRect(g, 0, 0, SCREEN_W, top + 8, theme::kBackground, 0.5f * s.cardOpen);
+  }
   glassPanel(g, 0, top, SCREEN_W, SCREEN_H - top + 30, 26, theme::kSurface);
-  if (rowsVisible(g, top + 8, 6)) g.fillSmoothRoundRect(SCREEN_W / 2 - 22, top + 9, 44, 5, 2, theme::kGridBright);
+  roundedRect(g, SCREEN_W / 2 - 22, top + 9, 44, 5, 2, theme::kGridBright);
 
   // Header: callsign, airline, type.
   const int y = top + 24;

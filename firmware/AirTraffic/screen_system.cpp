@@ -93,15 +93,15 @@ constexpr Button kWifi{kSheetX + 24, kSheetY + 190, 220, 50};
 constexpr Button kDone{kSheetX + 262, kSheetY + 190, 134, 50};
 
 void segmented(Gfx& g, const Button& b, const char* left, const char* right, bool rightActive) {
-  g.fillSmoothRoundRect(b.x, b.y, b.w, b.h, 12, theme::kBackground);
+  roundedRect(g, b.x, b.y, b.w, b.h, 12, theme::kBackground);
   const int half = b.w / 2;
-  g.fillSmoothRoundRect(b.x + (rightActive ? half : 0) + 3, b.y + 3, half - 6, b.h - 6, 10, theme::kAccentDeep);
+  roundedRect(g, b.x + (rightActive ? half : 0) + 3, b.y + 3, half - 6, b.h - 6, 10, theme::kAccentDeep);
   text(g, left, b.x + half / 2, b.y + 11, theme::Font::Label, rightActive ? theme::kTextMuted : theme::kAccent, Align::Center);
   text(g, right, b.x + half + half / 2, b.y + 11, theme::Font::Label, rightActive ? theme::kAccent : theme::kTextMuted, Align::Center);
 }
 
 void pillButton(Gfx& g, const Button& b, const char* label, bool primary) {
-  g.fillSmoothRoundRect(b.x, b.y, b.w, b.h, b.h / 2, primary ? theme::kAccent : theme::kSurfaceHi);
+  roundedRect(g, b.x, b.y, b.w, b.h, b.h / 2, primary ? theme::kAccent : theme::kSurfaceHi);
   text(g, label, b.x + b.w / 2, b.y + b.h / 2 - 9, theme::Font::BodyBold,
        primary ? theme::kBackground : theme::kText, Align::Center);
 }

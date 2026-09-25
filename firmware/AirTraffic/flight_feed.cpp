@@ -66,8 +66,26 @@ void copyText(char (&dest)[N], const char* src) {
   dest[N - 1] = '\0';
 }
 
+}  // namespace
+
+const char* stateName(FeedState state) {
+  switch (state) {
+    case FeedState::WaitingForWifi: return "waiting for Wi-Fi";
+    case FeedState::Locating: return "locating";
+    case FeedState::Loading: return "loading";
+    case FeedState::Live: return "live";
+    case FeedState::Error: return "error";
+  }
+  return "?";
+}
+
+namespace {
+
 void setState(FeedState state, const char* error = "") {
   std::lock_guard<std::mutex> guard(dataLock);
+  if (state != currentStatus.state || strcmp(error, currentStatus.lastError) != 0) {
+    Serial.printf("[feed] %s%s%s\n", stateName(state), error[0] ? ": " : "", error);
+  }
   currentStatus.state = state;
   currentStatus.lastError = error;
 }
@@ -111,6 +129,7 @@ bool locate(const AppSettings& s) {
   if (net::getJson(kLocateUrl, doc) == net::Result::Ok) where = parsers::parseGeolocation(doc);
 
   if (!where.valid && s.autoLocation) {
+    Serial.printf("[feed] location lookup failed (Wi-Fi %s)\n", WiFi.status() == WL_CONNECTED ? "connected" : "NOT connected");
     setState(FeedState::Error, "can't find location");
     return false;
   }

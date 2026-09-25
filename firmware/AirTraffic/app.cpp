@@ -260,13 +260,15 @@ void updateData(uint32_t now) {
   if (ui.hasSelection) {
     ui.haveDetails = feed::details(ui.selectedHex, &ui.details);
     if (!photoDecoded) {
-      feed::withPhoto(ui.selectedHex, [](const uint8_t* data, size_t length) {
-        if (ui::decodePhoto(photo, data, length)) ui.photo = &photo;
+      // Decode once when the photo arrives; a failed decode is not retried.
+      photoDecoded = feed::withPhoto(ui.selectedHex, [](const uint8_t* data, size_t length) {
+        if (ui::decodePhoto(photo, data, length)) {
+          ui.photo = &photo;
+        } else {
+          Serial.printf("[app] photo for %s: %u bytes, could not decode\n", ui.selectedHex, static_cast<unsigned>(length));
+        }
       });
-      if (ui.photo != nullptr) {
-        photoDecoded = true;
-        ui.photoReadyMs = now;
-      }
+      if (ui.photo != nullptr) ui.photoReadyMs = now;
     }
   }
 }

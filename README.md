@@ -38,7 +38,8 @@
 - **Desk mode.** Leave it alone and it cycles through the nearest planes' cards.
 - **Settings on the screen**: aviation or metric units, 12/24 h clock, Wi-Fi setup.
 - **Wi-Fi setup from your phone** (QR code → setup page). Location is worked
-  out automatically, or type your coordinates.
+  out automatically, or type your coordinates. In homes with several access
+  points it joins the strongest one, and moves if the signal gets poor.
 - **Free data**, straight from the community ADS-B feeds
   [adsb.lol](https://adsb.lol) and [adsb.fi](https://adsb.fi) (automatic
   failover), routes and aircraft facts from [adsbdb.com](https://adsbdb.com).
@@ -83,9 +84,10 @@ Written for someone building their first ESP32 project.
 | Tap RANGE                      | 10 → 25 → 50 → 100 NM                         |
 | Press and hold                 | Settings                                      |
 
-**Serial console** (Tools ▸ Serial Monitor, 115200 baud): `demo` (pretend
-planes on/off), `shot` (screenshot, see below), `tap X Y`, `swipe left|right|up|down`,
-`hold` (drive the screen from the keyboard), `help`.
+**Serial console** (Tools ▸ Serial Monitor, 115200 baud): `status` (Wi-Fi,
+feed and memory), `scan` (every Wi-Fi network the board can see), `demo`
+(pretend planes on/off), `shot` (screenshot, see below), `tap X Y`,
+`swipe left|right|up|down`, `hold` (drive the screen from the keyboard), `help`.
 
 **Screenshots:** `pip install pyserial pillow`, then
 `python3 tools/screenshot.py /dev/ttyUSB0 radar.png` (use your port; add

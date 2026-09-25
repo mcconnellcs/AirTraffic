@@ -25,9 +25,8 @@ void drawRow(Gfx& g, const UiState& s, const Blip& b, int index, int y) {
   const float fade = appear * b.opacity;
   auto ink = [&](uint16_t c) { return anim::blend565(theme::kBackground, c, fade); };
 
-  g.fillSmoothRoundRect(x, y + 4, SCREEN_W - 32, kListRowH - 8, 14,
-                        ink(b.selected ? theme::kSurfaceHi : theme::kSurface));
-  g.fillSmoothRoundRect(x + 8, y + 16, 4, kListRowH - 32, 2, ink(b.emergency ? theme::kEmergency : b.color));
+  roundedRect(g, x, y + 4, SCREEN_W - 32, kListRowH - 8, 14, ink(b.selected ? theme::kSurfaceHi : theme::kSurface));
+  roundedRect(g, x + 8, y + 16, 4, kListRowH - 32, 2, ink(b.emergency ? theme::kEmergency : b.color));
 
   text(g, f.callsign, x + 24, y + 11, theme::Font::Hud, ink(theme::kText));
 

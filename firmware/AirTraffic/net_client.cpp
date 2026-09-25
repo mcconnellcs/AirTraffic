@@ -4,6 +4,7 @@
 #include <NetworkClientSecure.h>
 #include <WiFi.h>
 #include <esp_heap_caps.h>
+#include <string.h>
 
 // The ESP32 carries a list of trusted certificate authorities (the same idea as
 // a web browser). This lets us check that we're really talking to the right
@@ -29,10 +30,30 @@ struct SpiRamAllocator : ArduinoJson::Allocator {
 
 SpiRamAllocator spiRamAllocator;
 
+// Looks up the site's address first so problems show up clearly in the log.
+void logDns(const char* url) {
+  const char* start = strstr(url, "://");
+  if (start == nullptr) return;
+  start += 3;
+  const char* end = strpbrk(start, "/?");
+  char host[64];
+  const size_t len = end ? static_cast<size_t>(end - start) : strlen(start);
+  if (len >= sizeof(host)) return;
+  memcpy(host, start, len);
+  host[len] = '\0';
+  IPAddress ip;
+  const uint32_t t0 = millis();
+  const bool ok = WiFi.hostByName(host, ip);
+  Serial.printf("[net] dns %s -> %s (%lu ms)\n", host, ok ? ip.toString().c_str() : "FAILED", millis() - t0);
+}
+
 // Opens a GET request. Returns the HTTP status code, or a negative error.
 int beginGet(HTTPClient& http, NetworkClientSecure& client, const char* url) {
+  logDns(url);
+  const uint32_t t0 = millis();
   client.setCACertBundle(kCertBundleStart, kCertBundleEnd - kCertBundleStart);
   client.setTimeout(kTimeoutMs / 1000);
+  client.setHandshakeTimeout(kTimeoutMs / 1000);  // the library default is 2 minutes
   http.setTimeout(kTimeoutMs);
   http.setConnectTimeout(kTimeoutMs);
   http.setUserAgent(kUserAgent);
@@ -40,7 +61,9 @@ int beginGet(HTTPClient& http, NetworkClientSecure& client, const char* url) {
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   if (!http.begin(client, url)) return -1;
   http.addHeader("Accept", "application/json");
-  return http.GET();
+  const int code = http.GET();
+  Serial.printf("[net] GET %s -> %d (%lu ms)\n", url, code, millis() - t0);
+  return code;
 }
 
 }  // namespace
@@ -106,6 +129,7 @@ Result getBytes(const char* url, uint8_t** data, size_t* length, size_t maxBytes
   }
 
   const int declared = http.getSize();
+  Serial.printf("[net] download %d bytes from %s\n", declared, url);
   const size_t capacity = declared > 0 ? static_cast<size_t>(declared) : maxBytes;
   if (capacity > maxBytes) {
     http.end();

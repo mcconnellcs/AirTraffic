@@ -21,33 +21,29 @@ namespace {
 // Unrotated strips are a straight copy. Rotated ones are written one screen
 // row at a time (48 pixels each), which keeps the slow PSRAM writes tidy.
 void pushStrip(LGFX& display, const uint16_t* strip, int y0) {
-  auto pixels = reinterpret_cast<const lgfx::swap565_t*>(strip);
-  if (SCREEN_ROTATION == 0) {
-    display.pushImage(0, y0, SCREEN_W, Canvas::kStripRows, pixels);
-    return;
-  }
-  if (SCREEN_ROTATION == 2) {  // upside down: each row reversed, rows in reverse order
-    lgfx::swap565_t row[SCREEN_W];
+  Panel& panel = display.panel();
+  if (SCREEN_ROTATION == 0) {  // straight copy, one screen row at a time
     for (int r = 0; r < Canvas::kStripRows; r++) {
-      for (int x = 0; x < SCREEN_W; x++) row[x] = pixels[r * SCREEN_W + (SCREEN_W - 1 - x)];
-      display.pushImage(0, SCREEN_H - 1 - (y0 + r), SCREEN_W, 1, row);
+      memcpy(panel.row(y0 + r), strip + r * SCREEN_W, SCREEN_W * sizeof(uint16_t));
     }
     return;
   }
-  // 90 degrees either way: the strip becomes a vertical band of 48 columns,
-  // written in blocks of 16 screen rows (fewer, bigger copies are faster).
-  constexpr int kBlockRows = 16;
-  lgfx::swap565_t block[kBlockRows * Canvas::kStripRows];
-  const int px0 = SCREEN_ROTATION == 3 ? y0 : SCREEN_W - Canvas::kStripRows - y0;
-  for (int py0 = 0; py0 < SCREEN_H; py0 += kBlockRows) {
-    lgfx::swap565_t* out = block;
-    for (int py = py0; py < py0 + kBlockRows; py++) {
-      // Which picture column lands on screen row py?
-      const int x = SCREEN_ROTATION == 3 ? SCREEN_W - 1 - py : py;
-      const lgfx::swap565_t* column = pixels + x;
-      for (int c = 0; c < Canvas::kStripRows; c++) *out++ = column[c * SCREEN_W];
+  if (SCREEN_ROTATION == 2) {  // upside down: rows reversed, and each row back to front
+    for (int r = 0; r < Canvas::kStripRows; r++) {
+      const uint16_t* src = strip + r * SCREEN_W;
+      uint16_t* dst = panel.row(SCREEN_H - 1 - (y0 + r));
+      for (int x = 0; x < SCREEN_W; x++) dst[x] = src[SCREEN_W - 1 - x];
     }
-    display.pushImage(px0, py0, Canvas::kStripRows, kBlockRows, block);
+    return;
+  }
+  // 90 degrees either way: the strip becomes a vertical band of 48 columns.
+  // Each screen row gets 48 pixels gathered from one picture column.
+  const int px0 = SCREEN_ROTATION == 3 ? y0 : SCREEN_W - Canvas::kStripRows - y0;
+  for (int py = 0; py < SCREEN_H; py++) {
+    const int x = SCREEN_ROTATION == 3 ? SCREEN_W - 1 - py : py;  // picture column for this row
+    const uint16_t* column = strip + x;
+    uint16_t* dst = panel.row(py) + px0;
+    for (int c = 0; c < Canvas::kStripRows; c++) dst[c] = column[c * SCREEN_W];
   }
 }
 
@@ -66,8 +62,10 @@ bool Canvas::begin(LGFX* display) {
   if (jobs_ == nullptr) return false;
   gfx_.setColorDepth(16);
   xSemaphoreTake(free_[current_], portMAX_DELAY);  // we own buffer 0 to start with
-  // The copier lives on core 0 (Arduino's loop() runs on core 1).
-  return xTaskCreatePinnedToCore(pushTask, "strip_push", 3072, this, 2, nullptr, 0) == pdPASS;
+  // The copier lives on core 0 (Arduino's loop() runs on core 1), at the same
+  // priority as the download task so the two share the core fairly. (At a
+  // higher priority it starved the downloads and HTTPS connections timed out.)
+  return xTaskCreatePinnedToCore(pushTask, "strip_push", 3072, this, 1, nullptr, 0) == pdPASS;
 }
 
 void Canvas::pushTask(void* self) {
@@ -360,6 +358,43 @@ void blendRect(Gfx& g, int x, int y, int w, int h, uint16_t color, float amount)
   }
 }
 
+void darkenRect(Gfx& g, int x, int y, int w, int h) {
+  const ClipBox box = clipBox(g, x, y, w, h);
+  if (box.empty()) return;
+  for (int row = box.y0; row < box.y1; row++) {
+    uint16_t* p = pixelAt(g, box.x0, row);
+    for (int col = box.x0; col < box.x1; col++, p++) {
+      // Shift every channel right by one = half brightness (mask keeps the
+      // channels from bleeding into each other). Works on the swapped bytes.
+      *p = swapBytes(static_cast<uint16_t>((swapBytes(*p) >> 1) & 0x7BEF));
+    }
+  }
+}
+
+void roundedRect(Gfx& g, int x, int y, int w, int h, int radius, uint16_t color) {
+  const ClipBox box = clipBox(g, x, y, w, h);
+  if (box.empty()) return;
+  radius = std::min(radius, std::min(w, h) / 2);
+  const uint16_t swapped = swapBytes(color);
+  const Ink ink(color);
+  for (int row = box.y0; row < box.y1; row++) {
+    // How far the rounded corner pulls this row in from the left/right edges.
+    float inset = 0.0f;
+    const int fromTop = row - y, fromBottom = y + h - 1 - row;
+    const int d = std::min(fromTop, fromBottom);
+    if (d < radius) {
+      const float dy = radius - 0.5f - d;
+      inset = radius - sqrtf(std::max(0.0f, radius * radius - dy * dy));
+    }
+    const int left = x + static_cast<int>(inset), right = x + w - 1 - static_cast<int>(inset);
+    const float edge = 1.0f - (inset - static_cast<int>(inset));  // coverage of the edge pixel
+    const int fillFrom = std::max(box.x0, left + 1), fillTo = std::min(box.x1 - 1, right - 1);
+    if (fillFrom <= fillTo) std::fill(pixelAt(g, fillFrom, row), pixelAt(g, fillTo, row) + 1, swapped);
+    if (left >= box.x0 && left < box.x1) blendPixel(pixelAt(g, left, row), ink, static_cast<uint32_t>(edge * 256));
+    if (right != left && right >= box.x0 && right < box.x1) blendPixel(pixelAt(g, right, row), ink, static_cast<uint32_t>(edge * 256));
+  }
+}
+
 void glassPanel(Gfx& g, int x, int y, int w, int h, int radius, uint16_t fill) {
   if (!rowsVisible(g, y - 12, h + 24)) return;
   // Strips entirely inside the flat middle of the panel are just a fill.
@@ -371,10 +406,10 @@ void glassPanel(Gfx& g, int x, int y, int w, int h, int radius, uint16_t fill) {
   }
   // Soft shadow: a few slightly bigger, darker outlines behind the panel.
   for (int i = 3; i >= 1; i--) {
-    g.fillSmoothRoundRect(x - i * 2, y - i + 4, w + i * 4, h + i * 2, radius + i * 2,
-                          anim::blend565(theme::kBackground, 0x0000, 0.25f * (4 - i)));
+    roundedRect(g, x - i * 2, y - i + 4, w + i * 4, h + i * 2, radius + i * 2,
+                anim::blend565(theme::kBackground, 0x0000, 0.25f * (4 - i)));
   }
-  g.fillSmoothRoundRect(x, y, w, h, radius, fill);
+  roundedRect(g, x, y, w, h, radius, fill);
   // Highlight: a thin brighter line along the top, like light catching glass.
   g.drawGradientHLine(x + radius, y, w - 2 * radius, anim::blend565(fill, theme::kText, 0.10f),
                       anim::blend565(fill, theme::kText, 0.22f));
