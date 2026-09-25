@@ -11,7 +11,8 @@ namespace ui {
 // Call once at start-up.
 bool loadFonts();
 
-// The font to pass to sprite.setFont(...).
-const lgfx::IFont* font(theme::Font which);
+// The loaded font (its letter table) and the raw font bytes in flash.
+const lgfx::VLWfont* vlw(theme::Font which);
+const uint8_t* fontData(theme::Font which);
 
 }  // namespace ui

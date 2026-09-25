@@ -12,7 +12,8 @@ ARDUINOJSON ?= $(HOME)/Documents/Arduino/libraries/ArduinoJson/src
 BUILD       := build
 
 SOURCES := $(SKETCH)/geo.cpp $(SKETCH)/format.cpp $(SKETCH)/parsers.cpp \
-           $(SKETCH)/gesture.cpp $(SKETCH)/sky_model.cpp $(SKETCH)/settings_rules.cpp
+           $(SKETCH)/gesture.cpp $(SKETCH)/sky_model.cpp $(SKETCH)/settings_rules.cpp \
+           $(SKETCH)/demo_flights.cpp
 TESTS   := $(wildcard test_*.cpp)
 
 CXXFLAGS := -std=c++17 -O0 -g -Wall -Wextra -Werror -Wno-missing-field-initializers \

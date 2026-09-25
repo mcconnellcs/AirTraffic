@@ -2,11 +2,11 @@
 //  screen_radar.cpp  —  The main radar picture
 // =============================================================================
 //  Layers, drawn back to front (like painting):
-//    1. the dark scope circle with a soft glow in the middle
+//    1. the BACKGROUND layer: dark scope circle, range rings, compass ticks,
+//       the corner boxes and the top bar. Drawn once at start-up, copied in.
 //    2. the SWEEP: a bright line with a fading "phosphor" tail behind it
-//    3. range rings, compass ticks and N/E/S/W letters
-//    4. contrails, then aircraft, then their name tags
-//    5. corner info: aircraft count, place, range button, altitude colors
+//    3. contrails, then aircraft, then their name tags
+//    4. live corner info: aircraft count, place, range, the clock
 // =============================================================================
 #include <math.h>
 #include <string.h>
@@ -26,15 +26,25 @@ constexpr float kSweepTailDeg = 50.0f;   // how long the tail is
 constexpr int kMaxLabels = 9;            // name tags on the nearest planes only
 constexpr int kRangeButtonX = 14, kRangeButtonY = 424, kRangeButtonW = 96, kRangeButtonH = 44;
 
+Layer radarLayer;  // the background, drawn once
+
+// Text made once per frame (formatting numbers is slow; strips are many).
+char rangeLabelText[3][12];
+char countText[8];
+char rangeText[12];
+char emptyText[40];
+
 float rad(float deg) { return deg * kPi / 180.0f; }
 float rimX(float deg, float r) { return kRadarCX + r * sinf(rad(deg)); }
 float rimY(float deg, float r) { return kRadarCY - r * cosf(rad(deg)); }
 
 // How brightly the sweep has lit a blip: 1 right after the line passes, then fading.
 float sweepGlowFor(float sweepDeg, float bearingDeg) {
-  float behind = fmodf(sweepDeg - bearingDeg + 360.0f, 360.0f);  // degrees since the sweep passed
+  const float behind = fmodf(sweepDeg - bearingDeg + 360.0f, 360.0f);  // degrees since it passed
   return expf(-behind / 70.0f);
 }
+
+// ---- Background layer (drawn once) ---------------------------------------------
 
 void drawScope(Gfx& g) {
   // Soft glow: a few circles, each a little lighter toward the middle.
@@ -45,30 +55,15 @@ void drawScope(Gfx& g) {
   }
 }
 
-void drawSweep(Gfx& g, float sweepDeg) {
-  const float step = kSweepTailDeg / kSweepSlices;
-  for (int i = 0; i < kSweepSlices; i++) {
-    const float a0 = sweepDeg - (i + 1) * step;
-    const float a1 = sweepDeg - i * step + 0.4f;  // tiny overlap hides seams
-    const float fade = 1.0f - static_cast<float>(i) / kSweepSlices;
-    const uint16_t color = anim::blend565(theme::kScope, theme::kAccent, 0.30f * fade * fade);
-    g.fillTriangle(kRadarCX, kRadarCY, rimX(a0, kRadarR), rimY(a0, kRadarR), rimX(a1, kRadarR),
-                   rimY(a1, kRadarR), color);
-  }
-  wideLine(g, kRadarCX, kRadarCY, rimX(sweepDeg, kRadarR), rimY(sweepDeg, kRadarR), 1.6f,
-                 theme::kAccent);
-}
-
-void drawRings(Gfx& g, float rangeNm) {
+void drawRings(Gfx& g) {
   for (int i = 1; i <= 3; i++) {
     const int r = kRadarR * i / 3;
     g.drawCircle(kRadarCX, kRadarCY, r, i == 3 ? theme::kGridBright : theme::kGrid);
   }
-  // Cross hairs
-  g.drawFastVLine(kRadarCX, kRadarCY - kRadarR, kRadarR * 2, theme::kGrid);
+  g.drawFastVLine(kRadarCX, kRadarCY - kRadarR, kRadarR * 2, theme::kGrid);  // cross hairs
   g.drawFastHLine(kRadarCX - kRadarR, kRadarCY, kRadarR * 2, theme::kGrid);
 
-  // Compass ticks: small every 10°, big every 30°.
+  // Compass ticks: small every 10 degrees, big every 30.
   for (int deg = 0; deg < 360; deg += 10) {
     const bool major = deg % 30 == 0;
     const float inner = kRadarR - (major ? 12 : 6);
@@ -81,21 +76,41 @@ void drawRings(Gfx& g, float rangeNm) {
     text(g, kLetters[i], rimX(deg, kRadarR - 26), rimY(deg, kRadarR - 26) - 9, theme::Font::Hud,
          i == 0 ? theme::kAccent : theme::kTextDim, Align::Center);
   }
+}
 
-  // Range labels along the lower-right diagonal.
-  for (int i = 1; i <= 3; i++) {
+void drawCornersStatic(Gfx& g) {
+  g.fillSmoothRoundRect(kRangeButtonX, kRangeButtonY, kRangeButtonW, kRangeButtonH, 12, theme::kSurface);
+  g.drawRoundRect(kRangeButtonX, kRangeButtonY, kRangeButtonW, kRangeButtonH, 12, theme::kGrid);
+  text(g, "RANGE", kRangeButtonX + 14, kRangeButtonY + 6, theme::Font::Label, theme::kTextMuted);
+
+  const int keyX = 352, keyY = 450;  // altitude color key
+  text(g, "ALTITUDE FT", 466, keyY - 18, theme::Font::Label, theme::kTextMuted, Align::Right);
+  for (int i = 0; i < 6; i++) g.fillSmoothRoundRect(keyX + i * 19, keyY, 16, 5, 2, theme::kAltitude[i]);
+}
+
+// ---- Things that change every frame ---------------------------------------------
+
+void drawSweep(Gfx& g, float sweepDeg) {
+  const float step = kSweepTailDeg / kSweepSlices;
+  for (int i = 0; i < kSweepSlices; i++) {
+    const float a0 = sweepDeg - (i + 1) * step, a1 = sweepDeg - i * step;
+    const float fade = 1.0f - static_cast<float>(i) / kSweepSlices;
+    triangle(g, kRadarCX, kRadarCY, rimX(a0, kRadarR), rimY(a0, kRadarR), rimX(a1, kRadarR),
+             rimY(a1, kRadarR), theme::kAccent, 0.30f * fade * fade);
+  }
+  wideLine(g, kRadarCX, kRadarCY, rimX(sweepDeg, kRadarR), rimY(sweepDeg, kRadarR), 1.6f, theme::kAccent);
+}
+
+void drawRangeLabels(Gfx& g) {
+  for (int i = 1; i <= 3; i++) {  // along the lower-right diagonal
     const float r = kRadarR * i / 3.0f;
-    char label[12];
-    const float nm = rangeNm * i / 3.0f;
-    snprintf(label, sizeof(label), i == 3 ? "%.0f NM" : "%.0f", nm);
-    text(g, label, rimX(135, r) + 4, rimY(135, r) + 2, theme::Font::Label, theme::kTextMuted);
+    text(g, rangeLabelText[i - 1], rimX(135, r) + 4, rimY(135, r) + 2, theme::Font::Label, theme::kTextMuted);
   }
 }
 
 void drawHome(Gfx& g, uint32_t now) {
   const float p = anim::progress(0, now % 2400, 2400);
-  const float r = 6 + p * 26;
-  g.drawCircle(kRadarCX, kRadarCY, r, anim::blend565(theme::kScope, theme::kHome, 0.5f * (1 - p)));
+  g.drawCircle(kRadarCX, kRadarCY, 6 + p * 26, anim::blend565(theme::kScope, theme::kHome, 0.5f * (1 - p)));
   g.fillSmoothCircle(kRadarCX, kRadarCY, 4, theme::kHome);
   g.fillSmoothCircle(kRadarCX, kRadarCY, 2, theme::kScope);
 }
@@ -105,7 +120,7 @@ void drawTrail(Gfx& g, const Blip& b) {
     const float t = static_cast<float>(i) / b.trailCount;  // 0 = oldest
     const uint16_t c = anim::blend565(theme::kScope, b.color, 0.55f * t * b.opacity);
     wedgeLine(g, b.trailX[i - 1], b.trailY[i - 1], b.trailX[i], b.trailY[i], 0.4f + 1.2f * t,
-                    0.4f + 1.2f * (i + 1.0f) / b.trailCount, c);
+              0.4f + 1.2f * (i + 1.0f) / b.trailCount, c);
   }
 }
 
@@ -120,20 +135,18 @@ void drawSelection(Gfx& g, const Blip& b, uint32_t now) {
 }
 
 void drawBlip(Gfx& g, const Blip& b, uint32_t now) {
-  const float glow = 0.35f + 0.65f * b.sweepGlow;
   if (b.emergency) {
-    glowDot(g, b.x, b.y, 9, theme::kEmergency, theme::kScope, 0.4f + 0.6f * anim::pulse(now, 700));
+    glowDot(g, b.x, b.y, 8, theme::kEmergency, 0.4f + 0.6f * anim::pulse(now, 700));
   } else if (b.selected) {
-    glowDot(g, b.x, b.y, 8, theme::kAccent, theme::kScope, 0.5f);
+    glowDot(g, b.x, b.y, 7, theme::kAccent, 0.6f);
   } else if (b.sweepGlow > 0.05f) {
-    glowDot(g, b.x, b.y, 7, b.color, theme::kScope, 0.35f * b.sweepGlow * b.opacity);
+    glowDot(g, b.x, b.y, 6, b.color, b.sweepGlow * b.opacity);
   }
   if (b.fresh) {  // "ping": an expanding ring when a plane first appears
     const float p = anim::progress(b.track->firstSeenMs, now, 1500);
-    if (p < 1.0f) {
-      g.drawCircle(b.x, b.y, 8 + p * 22, anim::blend565(theme::kScope, b.color, 1.0f - p));
-    }
+    if (p < 1.0f) g.drawCircle(b.x, b.y, 8 + p * 22, anim::blend565(theme::kScope, b.color, 1.0f - p));
   }
+  const float glow = 0.35f + 0.65f * b.sweepGlow;
   const uint16_t color = anim::blend565(theme::kScope, b.color, b.opacity * (b.selected ? 1.0f : glow));
   planeIcon(g, b.x, b.y, b.heading, b.selected ? 26 : 20, b.emergency ? theme::kEmergency : color);
   if (b.selected) drawSelection(g, b, now);
@@ -145,15 +158,12 @@ void drawLabel(Gfx& g, const Blip& b) {
   const uint16_t main = anim::blend565(theme::kScope, b.selected ? theme::kText : theme::kTextDim, b.opacity);
   const uint16_t sub = anim::blend565(theme::kScope, b.color, b.opacity * 0.9f);
   text(g, f.callsign, x, y, theme::Font::Label, main);
-  const fmt::Label alt = fmt::shortAltitude(f.altFt, f.onGround);
-  text(g, alt.c_str(), x, y + 15, theme::Font::Label, b.emergency ? theme::kEmergency : sub);
+  text(g, b.altLabel, x, y + 15, theme::Font::Label, b.emergency ? theme::kEmergency : sub);
 }
 
-void drawCorners(Gfx& g, const UiState& s) {
+void drawCornersDynamic(Gfx& g, const UiState& s) {
   // Top left: how many aircraft
-  char count[8];
-  snprintf(count, sizeof(count), "%d", s.sky->activeCount());
-  const int w = text(g, count, 18, kStatusBarH + 8, theme::Font::HudLarge, theme::kText);
+  const int w = text(g, countText, 18, kStatusBarH + 8, theme::Font::HudLarge, theme::kText);
   text(g, "AIRCRAFT", 22 + w, kStatusBarH + 20, theme::Font::Label, theme::kTextMuted);
 
   // Top right: place name and a pulsing "live" dot
@@ -163,38 +173,33 @@ void drawCorners(Gfx& g, const UiState& s) {
   const char* state = live ? "LIVE" : s.feed.state == FeedState::Error ? "RETRYING" : "LOADING";
   const int sw = textWidth(g, state, theme::Font::Label);
   text(g, state, 462, kStatusBarH + 27, theme::Font::Label, dot, Align::Right);
-  glowDot(g, 462 - sw - 9, kStatusBarH + 34, 3, dot, theme::kBackground, anim::pulse(s.now, 1600));
+  glowDot(g, 462 - sw - 9, kStatusBarH + 34, 3, dot, anim::pulse(s.now, 1600));
 
-  // Bottom left: range button
-  if (rowsVisible(g, kRangeButtonY, kRangeButtonH)) {
-    g.fillSmoothRoundRect(kRangeButtonX, kRangeButtonY, kRangeButtonW, kRangeButtonH, 12, theme::kSurface);
-    g.drawRoundRect(kRangeButtonX, kRangeButtonY, kRangeButtonW, kRangeButtonH, 12, theme::kGrid);
-    text(g, "RANGE", kRangeButtonX + 14, kRangeButtonY + 6, theme::Font::Label, theme::kTextMuted);
-    char range[12];
-    snprintf(range, sizeof(range), "%u NM", s.settings.rangeNm);
-    text(g, range, kRangeButtonX + 14, kRangeButtonY + 21, theme::Font::BodyBold, theme::kText);
-  }
-
-  // Bottom right: altitude color key
-  const int keyX = 352, keyY = 450;
-  if (rowsVisible(g, keyY - 16, 30)) {
-    text(g, "ALTITUDE FT", 466, keyY - 18, theme::Font::Label, theme::kTextMuted, Align::Right);
-    for (int i = 0; i < 6; i++) {
-      g.fillSmoothRoundRect(keyX + i * 19, keyY, 16, 5, 2, theme::kAltitude[i]);
-    }
-  }
+  // Bottom left: the current range
+  text(g, rangeText, kRangeButtonX + 14, kRangeButtonY + 21, theme::Font::BodyBold, theme::kText);
 }
 
 void drawEmptySky(Gfx& g, const UiState& s) {
   if (s.feed.state != FeedState::Live || s.sky->activeCount() > 0) return;
   const uint16_t c = anim::blend565(theme::kScope, theme::kTextDim, 0.6f + 0.4f * anim::pulse(s.now, 3000));
   text(g, "Quiet skies", kRadarCX, kRadarCY + 40, theme::Font::BodyBold, c, Align::Center);
-  char line[40];
-  snprintf(line, sizeof(line), "No aircraft within %u NM", s.settings.rangeNm);
-  text(g, line, kRadarCX, kRadarCY + 62, theme::Font::Label, theme::kTextMuted, Align::Center);
+  text(g, emptyText, kRadarCX, kRadarCY + 62, theme::Font::Label, theme::kTextMuted, Align::Center);
 }
 
 }  // namespace
+
+bool buildRadarLayer() {
+  LGFX_Sprite picture;
+  if (!createLayerSprite(picture)) return false;
+  picture.fillScreen(theme::kBackground);
+  drawScope(picture);
+  drawRings(picture);
+  drawCornersStatic(picture);
+  drawStatusBarStatic(picture);
+  const bool ok = radarLayer.encode(picture);
+  picture.deleteSprite();
+  return ok;
+}
 
 // ---- Per-frame preparation -------------------------------------------------------
 
@@ -206,6 +211,14 @@ void prepareBlips(UiState& s) {
   s.blips.clear();
   int labels = 0;
 
+  for (int i = 1; i <= 3; i++) {
+    snprintf(rangeLabelText[i - 1], sizeof(rangeLabelText[0]), i == 3 ? "%.0f NM" : "%.0f",
+             s.displayRangeNm * i / 3.0f);
+  }
+  snprintf(countText, sizeof(countText), "%d", s.sky->activeCount());
+  snprintf(rangeText, sizeof(rangeText), "%u NM", s.settings.rangeNm);
+  snprintf(emptyText, sizeof(emptyText), "No aircraft within %u NM", s.settings.rangeNm);
+
   // Nearest first, so the closest planes get name tags.
   std::vector<const Track*> order;
   for (const Track& t : s.sky->tracks()) order.push_back(&t);
@@ -215,10 +228,10 @@ void prepareBlips(UiState& s) {
 
   for (const Track* t : order) {
     const geo::LatLon pos = s.sky->positionAt(*t, s.now);
-    const float dist = geo::distanceNm(s.home, pos);
-    if (dist > s.displayRangeNm * 1.02f) continue;
-    const float brg = geo::bearingDeg(s.home, pos);
-    const geo::ScreenPoint p = geo::toRadar(brg, dist, kRadarCX, kRadarCY, kRadarR, s.displayRangeNm);
+    const geo::ScreenPoint p = geo::toRadarFast(s.home, pos, kRadarCX, kRadarCY, kRadarR, s.displayRangeNm);
+    const float dx = p.x - kRadarCX, dy = p.y - kRadarCY;
+    if (sqrtf(dx * dx + dy * dy) > kRadarR * 1.02f) continue;  // off the scope
+    const float bearing = fmodf(atan2f(dx, -dy) * 180.0f / kPi + 360.0f, 360.0f);
 
     Blip b{};
     b.track = t;
@@ -226,19 +239,19 @@ void prepareBlips(UiState& s) {
     b.y = p.y;
     b.heading = t->latest.hasTrack ? t->latest.trackDeg : 0;
     b.opacity = s.sky->opacityAt(*t, s.now);
-    b.sweepGlow = sweepGlowFor(s.sweepDeg, brg);
+    b.sweepGlow = sweepGlowFor(s.sweepDeg, bearing);
     b.color = theme::kAltitude[fmt::altitudeBand(t->latest.altFt, t->latest.onGround)];
     b.selected = s.hasSelection && strcmp(t->latest.hex, s.selectedHex) == 0;
     b.emergency = fmt::isEmergencySquawk(t->latest.squawk);
     b.fresh = s.sky->isNew(*t, s.now);
     b.labelled = b.selected || b.emergency || labels < kMaxLabels;
     if (b.labelled && !b.selected) labels++;
+    strncpy(b.altLabel, fmt::shortAltitude(t->latest.altFt, t->latest.onGround).c_str(), sizeof(b.altLabel) - 1);
 
     // Contrail: past reported positions, then where the plane is drawn now.
     for (int i = 0; i < t->trail.size(); i++) {
-      const geo::LatLon tp = t->trail.at(i);
-      const geo::ScreenPoint q = geo::toRadar(geo::bearingDeg(s.home, tp), geo::distanceNm(s.home, tp),
-                                              kRadarCX, kRadarCY, kRadarR, s.displayRangeNm);
+      const geo::ScreenPoint q =
+          geo::toRadarFast(s.home, t->trail.at(i), kRadarCX, kRadarCY, kRadarR, s.displayRangeNm);
       b.trailX[b.trailCount] = q.x;
       b.trailY[b.trailCount] = q.y;
       b.trailCount++;
@@ -253,11 +266,10 @@ void prepareBlips(UiState& s) {
 // ---- Drawing ------------------------------------------------------------------
 
 void drawRadar(Gfx& g, const UiState& s) {
-  g.fillScreen(theme::kBackground);
+  radarLayer.paint(g);
   if (rowsVisible(g, kRadarCY - kRadarR, kRadarR * 2 + 1)) {
-    drawScope(g);
     drawSweep(g, s.sweepDeg);
-    drawRings(g, s.displayRangeNm);
+    drawRangeLabels(g);
     drawHome(g, s.now);
     for (const Blip& b : s.blips) drawTrail(g, b);
     for (auto it = s.blips.rbegin(); it != s.blips.rend(); ++it) drawBlip(g, *it, s.now);
@@ -266,8 +278,8 @@ void drawRadar(Gfx& g, const UiState& s) {
     }
     drawEmptySky(g, s);
   }
-  drawCorners(g, s);
-  drawStatusBar(g, s);
+  drawCornersDynamic(g, s);
+  drawStatusBarDynamic(g, s);
   drawPageDots(g, 0, 2);
 }
 

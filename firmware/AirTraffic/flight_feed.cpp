@@ -6,6 +6,7 @@
 
 #include <mutex>
 
+#include "demo_flights.h"
 #include "net_client.h"
 #include "parsers.h"
 
@@ -48,6 +49,8 @@ std::vector<CacheEntry> cache;
 std::vector<Request> prefetch;
 Request focus{};
 bool haveFocus = false;
+bool demoMode = false;
+uint32_t demoStartMs = 0;
 
 std::mutex photoLock;  // protects the photo
 char photoHex[8] = "";
@@ -93,6 +96,13 @@ CacheEntry& entryFor(const char* hex) {  // caller must hold dataLock
 
 bool locate(const AppSettings& s) {
   setState(FeedState::Locating);
+  if (isDemo()) {
+    std::lock_guard<std::mutex> guard(dataLock);
+    currentStatus.haveLocation = true;
+    currentStatus.home = demo::kHome;
+    copyText(currentStatus.city, demo::kCity);
+    return true;
+  }
   JsonDocument doc(net::psramAllocator());
   Geolocation where{};
   if (net::getJson(kLocateUrl, doc) == net::Result::Ok) where = parsers::parseGeolocation(doc);
@@ -132,30 +142,59 @@ void queuePrefetch(const std::vector<Flight>& flights) {  // caller must hold da
   }
 }
 
-void fetchFlights(geo::LatLon home, uint16_t rangeNm) {
+// Pretend planes for demo mode, trimmed to the radar range like real ones.
+parsers::AircraftResult demoSnapshot(geo::LatLon home, uint16_t rangeNm) {
+  uint32_t elapsed;
+  {
+    std::lock_guard<std::mutex> guard(dataLock);
+    elapsed = millis() - demoStartMs;
+  }
+  parsers::AircraftResult result{true, demo::flights(home, elapsed), 0};
+  std::vector<Flight> inRange;
+  for (const Flight& f : result.flights) {
+    if (f.distNm <= rangeNm * 1.15f) inRange.push_back(f);
+  }
+  result.totalInRange = inRange.size();
+  result.flights = std::move(inRange);
+  return result;
+}
+
+// Downloads and parses nearby planes. Returns false (and sets the error) on failure.
+bool downloadSnapshot(geo::LatLon home, uint16_t rangeNm, parsers::AircraftResult* parsed,
+                      const char** source) {
   static const JsonDocument filter = parsers::aircraftFilter();
   int radius = static_cast<int>(rangeNm * 1.2f) + 5;
   if (radius > kMaxQueryRadiusNm) radius = kMaxQueryRadiusNm;
 
   char url[128];
-  const char* source = "adsb.lol";
+  *source = "adsb.lol";
   JsonDocument doc(net::psramAllocator());
   snprintf(url, sizeof(url), kPrimaryUrl, home.lat, home.lon, radius);
   net::Result result = net::getJson(url, doc, &filter);
   if (result != net::Result::Ok) {
-    source = "adsb.fi";
+    *source = "adsb.fi";
     doc.clear();
     snprintf(url, sizeof(url), kFallbackUrl, home.lat, home.lon, radius);
     result = net::getJson(url, doc, &filter);
   }
   if (result != net::Result::Ok) {
     setState(FeedState::Error, net::describe(result));
-    return;
+    return false;
   }
-
-  parsers::AircraftResult parsed = parsers::parseAircraft(doc, home, rangeNm * 1.15, kMaxFlights);
-  if (!parsed.ok) {
+  *parsed = parsers::parseAircraft(doc, home, rangeNm * 1.15, kMaxFlights);
+  if (!parsed->ok) {
     setState(FeedState::Error, "unexpected reply");
+    return false;
+  }
+  return true;
+}
+
+void fetchFlights(geo::LatLon home, uint16_t rangeNm) {
+  parsers::AircraftResult parsed;
+  const char* source = "demo";
+  if (isDemo()) {
+    parsed = demoSnapshot(home, rangeNm);
+  } else if (!downloadSnapshot(home, rangeNm, &parsed, &source)) {
     return;
   }
 
@@ -181,7 +220,9 @@ bool looksLikeFlightNumber(const char* callsign) {
 
 void fetchRoute(const Request& r) {
   RouteInfo route{};
-  if (looksLikeFlightNumber(r.callsign)) {
+  if (isDemo()) {
+    route = demo::route(r.callsign);
+  } else if (looksLikeFlightNumber(r.callsign)) {
     char url[96];
     snprintf(url, sizeof(url), kRouteUrl, r.callsign);
     JsonDocument doc(net::psramAllocator());
@@ -196,7 +237,9 @@ void fetchRoute(const Request& r) {
 
 void fetchAircraft(const Request& r) {
   AircraftInfo info{};
-  if (r.hex[0] != '~') {  // '~' means a non-ICAO (ground radar) target: no database entry
+  if (isDemo()) {
+    info = demo::aircraft(r.callsign);
+  } else if (r.hex[0] != '~') {  // '~' = non-ICAO (ground radar) target: no database entry
     char url[96];
     snprintf(url, sizeof(url), kAircraftUrl, r.hex);
     JsonDocument doc(net::psramAllocator());
@@ -279,7 +322,7 @@ void feedTask(void*) {
   bool located = false;
 
   for (;;) {
-    if (WiFi.status() != WL_CONNECTED) {
+    if (!isDemo() && WiFi.status() != WL_CONNECTED) {
       setState(FeedState::WaitingForWifi);
       delay(500);
       continue;
@@ -356,6 +399,22 @@ void updateSettings(const AppSettings& s) {
   } else if (rangeChanged) {
     settingsChanged = true;
   }
+}
+
+void setDemo(bool on) {
+  std::lock_guard<std::mutex> guard(dataLock);
+  if (demoMode == on) return;
+  demoMode = on;
+  demoStartMs = millis();
+  settingsChanged = true;  // makes the task locate again and fetch straight away
+  currentStatus.haveLocation = false;
+  cache.clear();
+  prefetch.clear();
+}
+
+bool isDemo() {
+  std::lock_guard<std::mutex> guard(dataLock);
+  return demoMode;
 }
 
 bool latest(uint32_t lastSequence, Snapshot* out) {

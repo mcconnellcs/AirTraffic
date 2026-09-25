@@ -101,7 +101,7 @@ void drawStat(Gfx& g, const Stat& st, int x, int y) {
   if (!rowsVisible(g, y, 56)) return;
   text(g, st.label, x, y, theme::Font::Label, theme::kTextMuted);
   const int w = text(g, st.value.c_str(), x, y + 17, theme::Font::HudLarge, st.color);
-  if (st.trend != 2) trendArrow(g, x + w + 10, y + 33, st.trend, st.color);
+  if (st.trend == 1 || st.trend == -1) trendArrow(g, x + w + 10, y + 33, st.trend, st.color);
 }
 
 void drawStats(Gfx& g, const UiState& s, const Flight& f, geo::LatLon pos, int y) {
@@ -153,7 +153,7 @@ void drawCard(Gfx& g, const UiState& s) {
                             ? s.details.route.airline
                         : f.owner[0] ? f.owner
                         : s.haveDetails && s.details.aircraft.owner[0] ? s.details.aircraft.owner
-                                                                        : "Unknown operator";
+                                                                        : "Private aircraft";
   text(g, airline, kPad, y + 50, theme::Font::BodyBold, theme::kAccent);
   const char* model = f.desc[0] ? f.desc
                       : s.haveDetails && s.details.aircraft.model[0] ? s.details.aircraft.model

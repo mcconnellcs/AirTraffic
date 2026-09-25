@@ -61,6 +61,15 @@ ScreenPoint toRadar(double bearing, double distance, float centerX, float center
   return {static_cast<float>(centerX + r * sin(a)), static_cast<float>(centerY - r * cos(a))};
 }
 
+ScreenPoint toRadarFast(LatLon home, LatLon p, float centerX, float centerY, float radiusPx,
+                        double rangeNm) {
+  // One degree of latitude is 60 nm; one degree of longitude shrinks with cos(latitude).
+  const float northNm = static_cast<float>((p.lat - home.lat) * 60.0);
+  const float eastNm = static_cast<float>((p.lon - home.lon) * 60.0 * cos(toRad(home.lat)));
+  const float scale = static_cast<float>(radiusPx / rangeNm);
+  return {centerX + eastNm * scale, centerY - northNm * scale};
+}
+
 double routeProgress(LatLon origin, LatLon position, LatLon dest) {
   const double flown = distanceNm(origin, position);
   const double remaining = distanceNm(position, dest);

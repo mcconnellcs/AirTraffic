@@ -6,7 +6,7 @@
 #include "board_config.h"
 #include "flight_feed.h"
 #include "gesture.h"
-#include "screenshot.h"
+#include "serial_console.h"
 #include "sky_model.h"
 #include "ui_fonts.h"
 #include "ui_screens.h"
@@ -42,6 +42,7 @@ anim::Tween rangeTween = anim::Tween::still(kDefaultRangeNm);
 anim::Tween scrollTween = anim::Tween::still(0);
 anim::Tween settingsTween = anim::Tween::still(0);
 bool photoDecoded = false;
+Gesture injected{GestureType::None, 0, 0};
 uint32_t lastTouchMs = 0, lastAmbientMs = 0, fpsStartMs = 0, frames = 0;
 int ambientIndex = 0;
 
@@ -187,7 +188,12 @@ void readTouch(uint32_t now) {
   uint16_t x = 0, y = 0;
   const bool touching = display.getTouch(&x, &y);
   if (touching) lastTouchMs = now;
-  const Gesture g = gestures.update(touching, x, y, now);
+  Gesture g = gestures.update(touching, x, y, now);
+  if (injected.type != GestureType::None) {  // a pretend touch from the serial console
+    g = injected;
+    injected.type = GestureType::None;
+    lastTouchMs = now;
+  }
   if (g.type == GestureType::None) return;
 
   if (ui.ambient) {  // any touch wakes up from the idle "desk display" mode
@@ -215,12 +221,13 @@ void updateAmbient(uint32_t now) {
 
 void updateScreenFlow(wifisetup::State wifi, uint32_t now) {
   const bool bootDone = now - ui.bootStartMs >= kMinBootMs;
+  const bool online = wifi == wifisetup::State::Connected || feed::isDemo();
   switch (ui.screen) {
     case ui::Screen::Boot:
-      ui.bootMessage = wifi != wifisetup::State::Connected ? "Connecting to Wi-Fi"
-                       : !ui.feed.haveLocation              ? "Finding your location"
-                                                            : "Scanning the sky";
-      if (wifi == wifisetup::State::Portal && now - ui.bootStartMs > 1500) {
+      ui.bootMessage = !online                 ? "Connecting to Wi-Fi"
+                       : !ui.feed.haveLocation ? "Finding your location"
+                                               : "Scanning the sky";
+      if (!online && wifi == wifisetup::State::Portal && now - ui.bootStartMs > 1500) {
         ui.screen = ui::Screen::Setup;
         ui.bootStartMs = now;
       } else if (bootDone && (ui.feed.state == FeedState::Live || ui.feed.state == FeedState::Error)) {
@@ -229,7 +236,7 @@ void updateScreenFlow(wifisetup::State wifi, uint32_t now) {
       }
       break;
     case ui::Screen::Setup:
-      if (wifi == wifisetup::State::Connected) {
+      if (online) {
         ui.screen = ui::Screen::Boot;
         ui.bootStartMs = now;
       }
@@ -319,6 +326,8 @@ void logFps(uint32_t now) {
 
 }  // namespace
 
+void injectGesture(const Gesture& gesture) { injected = gesture; }
+
 void begin() {
   Serial.begin(115200);
   Serial.println("\n=== AirTraffic ===");
@@ -345,7 +354,7 @@ void begin() {
 
 void tick() {
   const uint32_t now = millis();
-  screenshot::poll(canvas);
+  console::poll(canvas);
 
   const wifisetup::State wifi = wifisetup::process();
   AppSettings fromPortal;

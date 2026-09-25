@@ -51,6 +51,10 @@ constexpr size_t kMaxFlights = 60;
 void begin(const AppSettings& settings);
 void updateSettings(const AppSettings& settings);
 
+// Demo mode: pretend planes instead of downloads (works without Wi-Fi).
+void setDemo(bool on);
+bool isDemo();
+
 // Copies the newest download if it's newer than `lastSequence`.
 bool latest(uint32_t lastSequence, Snapshot* out);
 

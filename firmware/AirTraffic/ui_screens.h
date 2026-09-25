@@ -34,6 +34,7 @@ struct Blip {
   bool emergency;
   bool fresh;           // just appeared
   bool labelled;
+  char altLabel[8];     // "FL350", "4,600"... made once per frame, not per strip
   float trailX[Trail::kCapacity + 1];
   float trailY[Trail::kCapacity + 1];
   int trailCount;
@@ -89,7 +90,13 @@ void drawCard(Gfx& g, const UiState& s);
 void drawList(Gfx& g, const UiState& s);
 void drawSettings(Gfx& g, const UiState& s);
 void drawStatusBar(Gfx& g, const UiState& s);
+void drawStatusBarStatic(Gfx& g);                    // logo + title (into a layer)
+void drawStatusBarDynamic(Gfx& g, const UiState& s);  // clock + Wi-Fi (every frame)
 void drawPageDots(Gfx& g, int active, int count);
+
+// Background layers, drawn once at start-up (see ui_canvas.h, "Trick 3").
+bool buildRadarLayer();
+bool buildListLayer();
 
 // ---- Touch -------------------------------------------------------------------
 // Which plane (index into s.blips) is at x,y on the radar, or -1.

@@ -118,7 +118,7 @@ bool initScreens() {
   char payload[64];
   snprintf(payload, sizeof(payload), "WIFI:T:nopass;S:%s;;", wifisetup::kHotspotName);
   qrSprite.qrcode(payload, 8, 8, kQrSize - 16, 3);
-  return true;
+  return buildRadarLayer() && buildListLayer();
 }
 
 void drawBoot(Gfx& g, const UiState& s) {

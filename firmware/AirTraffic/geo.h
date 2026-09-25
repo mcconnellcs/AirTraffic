@@ -44,6 +44,12 @@ const char* cardinal(double bearingDeg);
 ScreenPoint toRadar(double bearingDeg, double distanceNm, float centerX, float centerY,
                     float radiusPx, double rangeNm);
 
+// Same result, computed the quick way. Treats the area around `home` as flat,
+// which is accurate to well under 1% out to 100 nm and avoids slow trig maths.
+// Used every frame for every plane and every trail point.
+ScreenPoint toRadarFast(LatLon home, LatLon p, float centerX, float centerY, float radiusPx,
+                        double rangeNm);
+
 // How far along its trip a plane is: 0 = just left, 1 = arrived.
 double routeProgress(LatLon origin, LatLon position, LatLon dest);
 

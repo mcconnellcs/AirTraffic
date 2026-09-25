@@ -84,6 +84,17 @@ TEST_CASE("toRadar puts north up and scales distance to the radius") {
   CHECK(south.y == doctest::Approx(290));
 }
 
+TEST_CASE("toRadarFast agrees with the exact radar position") {
+  const LatLon points[] = {{32.620651, -80.67854}, {33.344559, -79.559418}, {32.866241, -80.012933},
+                           {31.5, -79.9327}, {32.7763, -78.0}};
+  for (const LatLon& p : points) {
+    const auto exact = geo::toRadar(geo::bearingDeg(kHome, p), geo::distanceNm(kHome, p), 240, 264, 194, 100);
+    const auto fast = geo::toRadarFast(kHome, p, 240, 264, 194, 100);
+    CHECK(fast.x == doctest::Approx(exact.x).epsilon(0.01));
+    CHECK(fast.y == doctest::Approx(exact.y).epsilon(0.01));
+  }
+}
+
 TEST_CASE("routeProgress is 0 at origin, 1 at destination, ~0.5 in the middle") {
   LatLon clt{35.214, -80.943}, ewr{40.6925, -74.1687};
   CHECK(geo::routeProgress(clt, clt, ewr) == doctest::Approx(0.0));
