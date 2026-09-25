@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <time.h>
 
+#include "backlight.h"
 #include "board_config.h"
 #include "flight_feed.h"
 #include "gesture.h"
@@ -25,7 +26,7 @@ constexpr uint32_t kPageSlideMs = 420;
 constexpr uint32_t kRangeZoomMs = 700;
 constexpr uint32_t kAmbientCycleMs = 12000;
 constexpr int kAmbientNearest = 5;
-constexpr uint8_t kBrightnessStep = 40;
+constexpr uint32_t kFrameMs = 33;           // ~30 frames per second is plenty
 
 LGFX display;
 ui::Canvas canvas;
@@ -80,7 +81,7 @@ void applySettings(const AppSettings& next, uint32_t now) {
   settings = next;
   settings::save(settings);
   feed::updateSettings(settings);
-  display.setBrightness(settings.brightness);
+  backlight::set(settings.brightness);
 }
 
 // Selects the next / previous plane (by distance) while the card is open.
@@ -99,12 +100,6 @@ void stepSelection(int direction, uint32_t now) {
 void onSettingsTap(const Gesture& g, uint32_t now) {
   AppSettings next = settings;
   switch (ui::hitSettings(g.x, g.y)) {
-    case ui::SettingsAction::BrightnessDown:
-      next.brightness = settings.brightness > 20 + kBrightnessStep ? settings.brightness - kBrightnessStep : 20;
-      break;
-    case ui::SettingsAction::BrightnessUp:
-      next.brightness = settings.brightness < 255 - kBrightnessStep ? settings.brightness + kBrightnessStep : 255;
-      break;
     case ui::SettingsAction::Units:
       next.units = settings.units == fmt::Units::Metric ? fmt::Units::Aviation : fmt::Units::Metric;
       break;
@@ -282,6 +277,8 @@ void updateUiState(uint32_t now) {
   ui.sweepDeg = static_cast<float>(now % kSweepPeriodMs) / kSweepPeriodMs * 360.0f;
   ui.displayRangeNm = rangeTween.valueAt(now);
   ui.cardOpen = cardTween.valueAt(now);
+  // Once the card is fully open it hides everything below its top edge.
+  ui.coveredFromY = ui.cardOpen >= 0.999f ? ui::kCardTop + 40 : SCREEN_H;
   ui.listScroll = scrollTween.valueAt(now);
   ui.settingsAnim = settingsTween.valueAt(now);
 
@@ -334,8 +331,9 @@ void begin() {
 
   settings = settings::load();
   display.init();
-  display.setBrightness(settings.brightness);
   display.fillScreen(theme::kBackground);
+  backlight::begin();
+  backlight::set(settings.brightness);
 
   bool ok = ui::loadFonts();
   ok &= ui::initIcons();
@@ -362,14 +360,24 @@ void tick() {
 
   updateData(now);
   updateScreenFlow(wifi, now);
+  updateUiState(now);
+  // Blips hold pointers into the sky model, so they are rebuilt every tick
+  // right after updateData() and before anything (touch, ambient) uses them.
+  ui::prepareBlips(ui);
   if (ui.screen == ui::Screen::Radar || ui.screen == ui::Screen::List) {
     readTouch(now);
     updateAmbient(now);
+    for (ui::Blip& b : ui.blips) {  // a touch may have changed the selection
+      b.selected = ui.hasSelection && strcmp(b.track->latest.hex, ui.selectedHex) == 0;
+    }
+    ui.cardOpen = cardTween.valueAt(now);
+    ui.settingsAnim = settingsTween.valueAt(now);
   }
-  updateUiState(now);
-  ui::prepareBlips(ui);
   render(now);
   logFps(now);
+  // Drawing faster than this only steals time from the downloads on core 0.
+  const uint32_t took = millis() - now;
+  if (took < kFrameMs) delay(kFrameMs - took);
 }
 
 }  // namespace app

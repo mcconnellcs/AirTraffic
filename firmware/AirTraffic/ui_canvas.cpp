@@ -1,6 +1,7 @@
 #include "ui_canvas.h"
 
 #include <esp_heap_caps.h>
+#include <esp_task_wdt.h>
 #include <freertos/task.h>
 #include <math.h>
 #include <string.h>
@@ -33,9 +34,20 @@ bool Canvas::begin(LGFX* display) {
 
 void Canvas::pushTask(void* self) {
   Canvas& canvas = *static_cast<Canvas*>(self);
+  // Core 0 is deliberately kept busy (copying strips + downloads), so its idle
+  // task rarely runs and the default watchdog would reboot us for that. Tell
+  // the watchdog to stop watching the idle tasks and watch THIS task instead:
+  // if a copy ever gets stuck for 8 seconds, the board restarts.
+  esp_task_wdt_config_t config = {};
+  config.timeout_ms = 8000;
+  config.idle_core_mask = 0;
+  config.trigger_panic = true;
+  const bool watched = esp_task_wdt_reconfigure(&config) == ESP_OK && esp_task_wdt_add(nullptr) == ESP_OK;
+  Serial.printf("[canvas] strip copier %s by the watchdog\n", watched ? "guarded" : "not guarded");
   Job job;
   for (;;) {
-    if (xQueueReceive(canvas.jobs_, &job, portMAX_DELAY) != pdTRUE) continue;
+    if (watched) esp_task_wdt_reset();
+    if (xQueueReceive(canvas.jobs_, &job, pdMS_TO_TICKS(1000)) != pdTRUE) continue;
     uint16_t* strip = canvas.strips_[job.buffer];
     canvas.display_->pushImage(0, job.y0, SCREEN_W, kStripRows, reinterpret_cast<lgfx::swap565_t*>(strip));
 
@@ -49,6 +61,7 @@ void Canvas::pushTask(void* self) {
       }
     }
     xSemaphoreGive(canvas.free_[job.buffer]);
+    if (job.y0 + kStripRows >= SCREEN_H) vTaskDelay(1);  // a breather for Wi-Fi once per frame
   }
 }
 
@@ -158,6 +171,10 @@ bool Layer::encode(const LGFX_Sprite& sprite) {
       rowStart_ = static_cast<uint32_t*>(heap_caps_malloc((SCREEN_H + 1) * sizeof(uint32_t), MALLOC_CAP_SPIRAM));
       runs_ = static_cast<uint16_t*>(heap_caps_malloc(count * sizeof(uint16_t), MALLOC_CAP_SPIRAM));
       if (rowStart_ == nullptr || runs_ == nullptr) {
+        heap_caps_free(rowStart_);
+        heap_caps_free(runs_);
+        rowStart_ = nullptr;
+        runs_ = nullptr;
         heap_caps_free(index);
         return false;
       }
@@ -297,6 +314,13 @@ void blendRect(Gfx& g, int x, int y, int w, int h, uint16_t color, float amount)
 
 void glassPanel(Gfx& g, int x, int y, int w, int h, int radius, uint16_t fill) {
   if (!rowsVisible(g, y - 12, h + 24)) return;
+  // Strips entirely inside the flat middle of the panel are just a fill.
+  int32_t cx, cy, cw, ch;
+  g.getClipRect(&cx, &cy, &cw, &ch);
+  if (cy >= y + radius + 4 && cy + ch <= y + h - radius - 4) {
+    g.fillRect(x, cy, w, ch, fill);
+    return;
+  }
   // Soft shadow: a few slightly bigger, darker outlines behind the panel.
   for (int i = 3; i >= 1; i--) {
     g.fillSmoothRoundRect(x - i * 2, y - i + 4, w + i * 4, h + i * 2, radius + i * 2,

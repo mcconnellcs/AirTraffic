@@ -71,6 +71,7 @@ bool buildListLayer() {
 int listVisibleRows() { return (SCREEN_H - kListTop - 20) / kListRowH; }
 
 void drawList(Gfx& g, const UiState& s) {
+  if (!rowsVisible(g, 0, s.coveredFromY)) return;  // the card hides this strip completely
   listLayer.paint(g);
   if (rowsVisible(g, kStatusBarH, 40)) {
     snprintf(countText, sizeof(countText), "%d in %u NM", s.sky->activeCount(), s.settings.rangeNm);

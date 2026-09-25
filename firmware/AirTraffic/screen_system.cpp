@@ -80,19 +80,17 @@ void drawBootStatus(Gfx& g, const UiState& s, uint32_t t) {
 
 // ---- Settings sheet -------------------------------------------------------------
 
-constexpr int kSheetX = 30, kSheetY = 96, kSheetW = 420, kSheetH = 340;
+constexpr int kSheetX = 30, kSheetY = 120, kSheetW = 420, kSheetH = 280;
 
 struct Button {
   int x, y, w, h;
   bool contains(int px, int py) const { return px >= x && px < x + w && py >= y && py < y + h; }
 };
 
-constexpr Button kBrightDown{kSheetX + 150, kSheetY + 64, 48, 40};
-constexpr Button kBrightUp{kSheetX + 348, kSheetY + 64, 48, 40};
-constexpr Button kUnits{kSheetX + 150, kSheetY + 124, 246, 40};
-constexpr Button kClock{kSheetX + 150, kSheetY + 184, 246, 40};
-constexpr Button kWifi{kSheetX + 24, kSheetY + 250, 220, 50};
-constexpr Button kDone{kSheetX + 262, kSheetY + 250, 134, 50};
+constexpr Button kUnits{kSheetX + 150, kSheetY + 64, 246, 40};
+constexpr Button kClock{kSheetX + 150, kSheetY + 124, 246, 40};
+constexpr Button kWifi{kSheetX + 24, kSheetY + 190, 220, 50};
+constexpr Button kDone{kSheetX + 262, kSheetY + 190, 134, 50};
 
 void segmented(Gfx& g, const Button& b, const char* left, const char* right, bool rightActive) {
   g.fillSmoothRoundRect(b.x, b.y, b.w, b.h, 12, theme::kBackground);
@@ -190,13 +188,6 @@ void drawSettings(Gfx& g, const UiState& s) {
   auto shift = [dy](Button b) { return Button{b.x, b.y + dy, b.w, b.h}; };
   const int labelX = kSheetX + 24;
 
-  text(g, "Brightness", labelX, kBrightDown.y + dy + 11, theme::Font::Body, theme::kTextDim);
-  pillButton(g, shift(kBrightDown), "-", false);
-  pillButton(g, shift(kBrightUp), "+", false);
-  const int barX = kBrightDown.x + 58, barW = kBrightUp.x - barX - 10, barY = kBrightDown.y + dy + 18;
-  g.fillSmoothRoundRect(barX, barY, barW, 6, 3, theme::kBackground);
-  g.fillSmoothRoundRect(barX, barY, barW * s.settings.brightness / 255, 6, 3, theme::kAccent);
-
   text(g, "Units", labelX, kUnits.y + dy + 11, theme::Font::Body, theme::kTextDim);
   segmented(g, shift(kUnits), "FT \xC2\xB7 KT", "M \xC2\xB7 KM/H", s.settings.units == fmt::Units::Metric);
   text(g, "Clock", labelX, kClock.y + dy + 11, theme::Font::Body, theme::kTextDim);
@@ -207,8 +198,6 @@ void drawSettings(Gfx& g, const UiState& s) {
 }
 
 SettingsAction hitSettings(int x, int y) {
-  if (kBrightDown.contains(x, y)) return SettingsAction::BrightnessDown;
-  if (kBrightUp.contains(x, y)) return SettingsAction::BrightnessUp;
   if (kUnits.contains(x, y)) return SettingsAction::Units;
   if (kClock.contains(x, y)) return SettingsAction::Clock;
   if (kWifi.contains(x, y)) return SettingsAction::WifiSetup;

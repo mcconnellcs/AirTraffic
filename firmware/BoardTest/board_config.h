@@ -25,13 +25,12 @@
 constexpr int SCREEN_W = 480;
 constexpr int SCREEN_H = 480;
 
-// Backlight pin (turns the screen light on/off and sets brightness)
+// Backlight pin (see backlight.h for how it is driven)
 constexpr int PIN_BACKLIGHT = 38;
 
 class LGFX : public lgfx::LGFX_Device {
   lgfx::Bus_RGB      bus_;
   lgfx::Panel_ST7701_guition_esp32_4848S040 panel_;
-  lgfx::Light_PWM    light_;
   lgfx::Touch_GT911  touch_;
 
  public:
@@ -85,16 +84,6 @@ class LGFX : public lgfx::LGFX_Device {
       bus_.config(cfg);
     }
     panel_.setBus(&bus_);
-
-    {  // --- Backlight ---
-      auto cfg = light_.config();
-      cfg.pin_bl      = PIN_BACKLIGHT;
-      cfg.invert      = false;
-      cfg.freq        = 12000;
-      cfg.pwm_channel = 7;
-      light_.config(cfg);
-    }
-    panel_.light(&light_);
 
     {  // --- GT911 touch chip (talks over I2C: 2 wires, SDA + SCL) ---
       auto cfg = touch_.config();

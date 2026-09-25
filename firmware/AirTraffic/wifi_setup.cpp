@@ -9,9 +9,13 @@ namespace {
 
 constexpr int kConnectTimeoutS = 20;
 
+constexpr uint32_t kGiveUpConnectingMs = 30000;  // then offer the setup hotspot
+
 WiFiManager manager;
 AppSettings settings{};
 bool haveNewSettings = false;
+bool connectingToSaved = false;
+uint32_t connectStartMs = 0;
 
 char latText[16] = "";
 char lonText[16] = "";
@@ -65,12 +69,25 @@ void begin(const AppSettings& current) {
   manager.setConfigPortalBlocking(false);  // keep animating while we wait
   manager.setConnectTimeout(kConnectTimeoutS);
   manager.setShowInfoUpdate(false);
-  manager.autoConnect(kHotspotName);
+  if (manager.getWiFiIsSaved()) {
+    // Connect in the background so the start-up animation keeps moving.
+    // (WiFiManager's own autoConnect would freeze everything for a few seconds.)
+    WiFi.begin();
+    connectingToSaved = true;
+    connectStartMs = millis();
+  } else {
+    manager.autoConnect(kHotspotName);  // nothing saved: opens the setup hotspot
+  }
 }
 
 State process() {
   manager.process();
   if (WiFi.status() == WL_CONNECTED) return State::Connected;
+  if (connectingToSaved && !manager.getConfigPortalActive() &&
+      millis() - connectStartMs > kGiveUpConnectingMs) {
+    connectingToSaved = false;  // the saved network isn't there: let the user pick another
+    manager.startConfigPortal(kHotspotName);
+  }
   if (manager.getConfigPortalActive()) return State::Portal;
   return State::Connecting;
 }

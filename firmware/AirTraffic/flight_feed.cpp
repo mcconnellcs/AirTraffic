@@ -1,7 +1,9 @@
 #include "flight_feed.h"
 
 #include <WiFi.h>
+#include <ctype.h>
 #include <esp_heap_caps.h>
+#include <string.h>
 #include <time.h>
 
 #include <mutex>
@@ -23,6 +25,7 @@ constexpr const char* kLocateUrl =
     "https://ipwho.is/?fields=success,city,latitude,longitude,timezone";
 
 constexpr uint32_t kRetryLocateMs = 15000;
+constexpr uint32_t kBreatherMs = 20;        // pause between downloads (see feedTask)
 constexpr uint32_t kPrefetchGapMs = 1200;   // be polite: at most ~1 route lookup per second
 constexpr size_t kCacheSize = 48;
 constexpr size_t kPrefetchCount = 12;       // look up routes for the 12 nearest planes
@@ -212,6 +215,22 @@ void fetchFlights(geo::LatLon home, uint16_t rangeNm) {
 
 // ---- Details (route, aircraft, photo) -----------------------------------------
 
+// Text from the internet is only allowed into a URL if it is plain letters,
+// digits or dashes. Anything else (a "/", "?", "%"...) could change the request.
+bool safeForUrl(const char* text) {
+  if (text == nullptr || *text == '\0') return false;
+  for (const char* p = text; *p; p++) {
+    if (!isalnum(static_cast<unsigned char>(*p)) && *p != '-') return false;
+  }
+  return true;
+}
+
+// We only fetch photos from the site adsbdb points at, over HTTPS.
+bool safePhotoUrl(const char* url) {
+  return strncmp(url, "https://airport-data.com/", 25) == 0 ||
+         strncmp(url, "https://image.airport-data.com/", 31) == 0;
+}
+
 bool looksLikeFlightNumber(const char* callsign) {
   // Airline flights look like "AAL1699": 3 letters then digits.
   return strlen(callsign) >= 4 && isalpha(callsign[0]) && isalpha(callsign[1]) &&
@@ -222,7 +241,7 @@ void fetchRoute(const Request& r) {
   RouteInfo route{};
   if (isDemo()) {
     route = demo::route(r.callsign);
-  } else if (looksLikeFlightNumber(r.callsign)) {
+  } else if (looksLikeFlightNumber(r.callsign) && safeForUrl(r.callsign)) {
     char url[96];
     snprintf(url, sizeof(url), kRouteUrl, r.callsign);
     JsonDocument doc(net::psramAllocator());
@@ -239,7 +258,7 @@ void fetchAircraft(const Request& r) {
   AircraftInfo info{};
   if (isDemo()) {
     info = demo::aircraft(r.callsign);
-  } else if (r.hex[0] != '~') {  // '~' = non-ICAO (ground radar) target: no database entry
+  } else if (r.hex[0] != '~' && safeForUrl(r.hex)) {  // '~' = non-ICAO target: no database entry
     char url[96];
     snprintf(url, sizeof(url), kAircraftUrl, r.hex);
     JsonDocument doc(net::psramAllocator());
@@ -287,7 +306,7 @@ bool workOnFocus() {
     std::lock_guard<std::mutex> guard(photoLock);
     photoDone = strcmp(photoHex, r.hex) == 0;
   }
-  if (!photoDone && d.aircraft.valid && d.aircraft.photoUrl[0] != '\0') {
+  if (!photoDone && d.aircraft.valid && safePhotoUrl(d.aircraft.photoUrl)) {
     fetchPhoto(r, d.aircraft.photoUrl);
     return true;
   }
@@ -360,10 +379,16 @@ void feedTask(void*) {
       }
       fetchFlights(home, s.rangeNm);
       nextFetchMs = millis() + kRefreshMs;
+      delay(kBreatherMs);
       continue;
     }
 
-    if (workOnFocus()) continue;
+    // Each download is a burst of work. The short pauses between them let
+    // core 0's housekeeping run; without them the watchdog reboots the board.
+    if (workOnFocus()) {
+      delay(kBreatherMs);
+      continue;
+    }
     if (workOnPrefetch()) {
       delay(kPrefetchGapMs);
       continue;

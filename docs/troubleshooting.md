@@ -27,6 +27,8 @@ The LovyanGFX library isn't installed, or it's a very old version. Install
 ## The screen
 
 **Nothing on the screen, board seems dead.**
+The backlight is switched by GPIO 38 (see `backlight.h`); the firmware drives
+it as a plain on/off pin because PWM dimming did not light this board at all.
 Check the Serial Monitor. If it prints `=== AirTraffic ===`, the board runs
 and the problem is the display. Flash `firmware/BoardTest` — it shows colour
 bars with no Wi-Fi or memory tricks involved.

@@ -16,6 +16,7 @@ namespace net {
 namespace {
 
 constexpr uint32_t kTimeoutMs = 10000;
+constexpr int kMaxJsonBytes = 512 * 1024;  // no honest reply is anywhere near this
 constexpr const char* kUserAgent = "AirTraffic-ESP32/1.0 (+https://github.com/mcconnellcs/AirTraffic)";
 
 struct SpiRamAllocator : ArduinoJson::Allocator {
@@ -74,6 +75,10 @@ Result getJson(const char* url, JsonDocument& doc, const JsonDocument* filter, i
     Serial.printf("[net] %s -> HTTP %d\n", url, code);
     http.end();
     return Result::HttpError;
+  }
+  if (http.getSize() > kMaxJsonBytes) {
+    http.end();
+    return Result::TooBig;
   }
 
   DeserializationError err =

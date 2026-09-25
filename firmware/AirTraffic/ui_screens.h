@@ -76,6 +76,7 @@ struct UiState {
   float settingsAnim;        // 0..1
 
   bool ambient;              // idle "desk display" mode
+  int coveredFromY;          // rows from here down are hidden behind the card (SCREEN_H = none)
 };
 
 // ---- Per-frame preparation -------------------------------------------------------
@@ -105,7 +106,7 @@ int hitRadar(const UiState& s, int x, int y);
 int hitList(const UiState& s, int x, int y);
 bool hitRangeButton(int x, int y);
 
-enum class SettingsAction { None, Close, BrightnessDown, BrightnessUp, Units, Clock, WifiSetup };
+enum class SettingsAction { None, Close, Units, Clock, WifiSetup };
 SettingsAction hitSettings(int x, int y);
 
 // Things built once at start-up (QR code picture).

@@ -266,6 +266,7 @@ void prepareBlips(UiState& s) {
 // ---- Drawing ------------------------------------------------------------------
 
 void drawRadar(Gfx& g, const UiState& s) {
+  if (!rowsVisible(g, 0, s.coveredFromY)) return;  // the card hides this strip completely
   radarLayer.paint(g);
   if (rowsVisible(g, kRadarCY - kRadarR, kRadarR * 2 + 1)) {
     drawSweep(g, s.sweepDeg);

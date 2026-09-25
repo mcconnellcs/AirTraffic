@@ -140,9 +140,11 @@ void drawCard(Gfx& g, const UiState& s) {
   const Flight& f = t->latest;
   const geo::LatLon pos = s.sky->positionAt(*t, s.now);
 
-  // Dim everything behind the card, then slide the card up from the bottom.
-  blendRect(g, 0, 0, SCREEN_W, SCREEN_H, theme::kBackground, 0.55f * s.cardOpen);
+  // Dim what shows above the card, then slide the card up from the bottom.
+  // (Only the rows above the card are dimmed: the card covers the rest, and
+  // blending the whole screen every frame is slow.)
   const int top = kCardTop + static_cast<int>((SCREEN_H - kCardTop) * (1.0f - s.cardOpen));
+  blendRect(g, 0, 0, SCREEN_W, top + 8, theme::kBackground, 0.55f * s.cardOpen);
   glassPanel(g, 0, top, SCREEN_W, SCREEN_H - top + 30, 26, theme::kSurface);
   if (rowsVisible(g, top + 8, 6)) g.fillSmoothRoundRect(SCREEN_W / 2 - 22, top + 9, 44, 5, 2, theme::kGridBright);
 

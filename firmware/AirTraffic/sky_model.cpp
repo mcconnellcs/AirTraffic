@@ -80,6 +80,10 @@ void SkyModel::applySnapshot(const std::vector<Flight>& flights, uint32_t nowMs)
 }
 
 void SkyModel::prune(uint32_t nowMs) {
+  bool anyExpired = false;
+  for (const Track& t : tracks_) anyExpired |= t.lostAtMs != 0 && nowMs - t.lostAtMs > kFadeMs;
+  if (!anyExpired) return;  // leave the list alone so pointers into it stay valid
+
   std::vector<Track> kept;
   kept.reserve(tracks_.size());
   for (const Track& t : tracks_) {

@@ -8,6 +8,7 @@
 //
 //  Open Tools > Serial Monitor (115200 baud) to read the test report.
 // =============================================================================
+#include "backlight.h"
 #include "board_config.h"
 
 LGFX display;
@@ -37,7 +38,8 @@ void setup() {
   if (!display.init()) {
     Serial.println("FAIL: display.init() returned false");
   }
-  display.setBrightness(200);
+  backlight::begin();
+  backlight::set(200);
   drawColorBars();
   Serial.println("Showing color bars for 3 seconds...");
   delay(3000);

@@ -41,7 +41,7 @@ GitHub and never sent anywhere.
 | Swipe **left** on the radar    | The list of all nearby flights                      |
 | Swipe **right** on the list    | Back to the radar                                   |
 | Tap **RANGE**                  | Zoom: 10, 25, 50 or 100 nautical miles              |
-| **Press and hold** anywhere    | Settings: brightness, units, 12/24h clock, Wi-Fi    |
+| **Press and hold** anywhere    | Settings: units, 12/24h clock, Wi-Fi                |
 
 Leave it alone for a minute and it turns into a desk display, showing the
 nearest planes' cards one after another. Touch it to take control again.

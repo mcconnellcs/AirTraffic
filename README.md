@@ -36,7 +36,7 @@
   squawk, and a photo of the actual aircraft when one exists.
 - **Nearby flights list**, nearest first, with routes.
 - **Desk mode.** Leave it alone and it cycles through the nearest planes' cards.
-- **Settings on the screen**: brightness, aviation or metric units, 12/24 h clock.
+- **Settings on the screen**: aviation or metric units, 12/24 h clock, Wi-Fi setup.
 - **Wi-Fi setup from your phone** (QR code → setup page). Location is worked
   out automatically, or type your coordinates.
 - **Free data**, straight from the community ADS-B feeds
