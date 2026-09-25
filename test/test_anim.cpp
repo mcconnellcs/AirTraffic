@@ -1,6 +1,8 @@
 #include "doctest.h"
 #include "anim.h"
 
+#include <initializer_list>
+
 TEST_CASE("easing curves start at 0 and end at 1") {
   for (auto ease : {anim::linear, anim::easeOutCubic, anim::easeInOutCubic, anim::easeOutBack,
                     anim::easeOutExpo}) {

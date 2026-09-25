@@ -1,6 +1,8 @@
 #include "doctest.h"
 #include "geo.h"
 
+#include <string>
+
 using geo::LatLon;
 
 static const LatLon kHome{32.7763, -79.9327};  // Charleston, SC

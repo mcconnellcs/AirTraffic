@@ -1,6 +1,8 @@
 #include "doctest.h"
 #include "sky_model.h"
 
+#include <string>
+
 #include <cstring>
 
 static const geo::LatLon kHome{32.7763, -79.9327};
