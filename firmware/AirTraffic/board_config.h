@@ -86,7 +86,10 @@ class LGFX : public lgfx::LGFX_Device {
       cfg.pin_vsync   = 17;  // VSYNC = "new picture starts"
       cfg.pin_hsync   = 16;  // HSYNC = "new row starts"
       cfg.pin_pclk    = 21;  // PCLK  = "next pixel, please"
-      cfg.freq_write  = 14000000;  // 14 million pixels per second
+      // Pixel clock. Faster = smoother refresh but more memory traffic; when the
+      // memory is busy the picture can judder (worst at the left edge). 12 MHz
+      // refreshes the panel about 42 times a second and keeps it steady.
+      cfg.freq_write  = 12000000;
 
       cfg.hsync_polarity    = 0;
       cfg.hsync_front_porch = 10;

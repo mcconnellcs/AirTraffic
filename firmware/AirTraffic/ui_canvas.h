@@ -86,6 +86,7 @@ class Canvas {
   SemaphoreHandle_t free_[2] = {nullptr, nullptr};
   uint16_t* volatile capture_ = nullptr;
   bool capturing_ = false;  // core 0 only: copying the frame that started at strip 0
+  uint32_t stripHash_[SCREEN_H / kStripRows] = {};  // what each strip looked like last time
 
   static void pushTask(void* self);
   void beginLayer(int y0, int offsetX);

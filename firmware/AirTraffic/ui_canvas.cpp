@@ -112,7 +112,20 @@ void Canvas::beginLayer(int y0, int offsetX) {
   gfx_.setClipRect(left, y0, right - left, kStripRows);
 }
 
+// A quick fingerprint of a strip: if it matches last frame's, the screen
+// already shows it and the (slow) copy to screen memory can be skipped.
+static uint32_t fingerprint(const uint16_t* strip) {
+  const uint32_t* words = reinterpret_cast<const uint32_t*>(strip);
+  uint32_t hash = 0;
+  for (size_t i = 0; i < SCREEN_W * Canvas::kStripRows / 2; i++) hash = hash * 31 + words[i];
+  return hash;
+}
+
 void Canvas::endStrip(int y0) {
+  const uint32_t hash = fingerprint(strips_[current_]);
+  const int index = y0 / kStripRows;
+  if (hash == stripHash_[index] && capture_ == nullptr) return;  // unchanged: nothing to copy
+  stripHash_[index] = hash;
   const Job job{current_, y0};
   xQueueSend(jobs_, &job, portMAX_DELAY);          // hand it to core 0
   current_ ^= 1;                                   // and draw the next strip into the other buffer

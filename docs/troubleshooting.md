@@ -45,6 +45,13 @@ Almost always the PSRAM setting above. If PSRAM is right, note the line after
 Change `SCREEN_ROTATION` in `firmware/AirTraffic/board_config.h` (0, 1, 2 or 3
 = quarter turns) and upload again. Touch follows automatically.
 
+**The picture judders or rows jump sideways now and then, worst on the left.**
+The screen is refreshed straight out of the board's PSRAM, and when that
+memory is busy (a download arriving, a big redraw) the refresh falls behind
+for a moment. The pixel clock in `board_config.h` (`cfg.freq_write`) is set to
+12 MHz, which leaves enough headroom on a tested board; if you still see it,
+try 11 MHz. Higher values look smoother on paper but judder more.
+
 **Colours are wrong (red shows as blue) or the picture is shifted.**
 Your board is a different revision. All the wiring lives in
 `firmware/AirTraffic/board_config.h`; compare it with a LovyanGFX or Arduino
