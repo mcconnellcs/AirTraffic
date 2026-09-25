@@ -15,6 +15,44 @@ namespace ui {
 
 // ---- Canvas -----------------------------------------------------------------
 
+namespace {
+
+// Copies one finished strip to the screen, turning it to match SCREEN_ROTATION.
+// Unrotated strips are a straight copy. Rotated ones are written one screen
+// row at a time (48 pixels each), which keeps the slow PSRAM writes tidy.
+void pushStrip(LGFX& display, const uint16_t* strip, int y0) {
+  auto pixels = reinterpret_cast<const lgfx::swap565_t*>(strip);
+  if (SCREEN_ROTATION == 0) {
+    display.pushImage(0, y0, SCREEN_W, Canvas::kStripRows, pixels);
+    return;
+  }
+  if (SCREEN_ROTATION == 2) {  // upside down: each row reversed, rows in reverse order
+    lgfx::swap565_t row[SCREEN_W];
+    for (int r = 0; r < Canvas::kStripRows; r++) {
+      for (int x = 0; x < SCREEN_W; x++) row[x] = pixels[r * SCREEN_W + (SCREEN_W - 1 - x)];
+      display.pushImage(0, SCREEN_H - 1 - (y0 + r), SCREEN_W, 1, row);
+    }
+    return;
+  }
+  // 90 degrees either way: the strip becomes a vertical band of 48 columns,
+  // written in blocks of 16 screen rows (fewer, bigger copies are faster).
+  constexpr int kBlockRows = 16;
+  lgfx::swap565_t block[kBlockRows * Canvas::kStripRows];
+  const int px0 = SCREEN_ROTATION == 3 ? y0 : SCREEN_W - Canvas::kStripRows - y0;
+  for (int py0 = 0; py0 < SCREEN_H; py0 += kBlockRows) {
+    lgfx::swap565_t* out = block;
+    for (int py = py0; py < py0 + kBlockRows; py++) {
+      // Which picture column lands on screen row py?
+      const int x = SCREEN_ROTATION == 3 ? SCREEN_W - 1 - py : py;
+      const lgfx::swap565_t* column = pixels + x;
+      for (int c = 0; c < Canvas::kStripRows; c++) *out++ = column[c * SCREEN_W];
+    }
+    display.pushImage(px0, py0, Canvas::kStripRows, kBlockRows, block);
+  }
+}
+
+}  // namespace
+
 bool Canvas::begin(LGFX* display) {
   display_ = display;
   const size_t bytes = SCREEN_W * kStripRows * sizeof(uint16_t);
@@ -49,7 +87,7 @@ void Canvas::pushTask(void* self) {
     if (watched) esp_task_wdt_reset();
     if (xQueueReceive(canvas.jobs_, &job, pdMS_TO_TICKS(1000)) != pdTRUE) continue;
     uint16_t* strip = canvas.strips_[job.buffer];
-    canvas.display_->pushImage(0, job.y0, SCREEN_W, kStripRows, reinterpret_cast<lgfx::swap565_t*>(strip));
+    pushStrip(*canvas.display_, strip, job.y0);
 
     // Screenshots copy a whole frame, starting only at the first strip.
     if (job.y0 == 0) canvas.capturing_ = canvas.capture_ != nullptr;
@@ -206,6 +244,16 @@ void Layer::paint(Gfx& g) const {
 }
 
 // ---- Helpers ----------------------------------------------------------------
+
+void rotateTouch(int* x, int* y) {
+  const int px = *x, py = *y;
+  switch (SCREEN_ROTATION) {
+    case 1: *x = py; *y = SCREEN_H - 1 - px; break;
+    case 2: *x = SCREEN_W - 1 - px; *y = SCREEN_H - 1 - py; break;
+    case 3: *x = SCREEN_W - 1 - py; *y = px; break;
+    default: break;
+  }
+}
 
 bool rowsVisible(Gfx& g, int y, int h) {
   int32_t cx, cy, cw, ch;

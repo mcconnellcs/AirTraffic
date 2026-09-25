@@ -41,6 +41,10 @@ Exactly that: **Tools ▸ PSRAM ▸ OPI PSRAM**, then Upload again.
 Almost always the PSRAM setting above. If PSRAM is right, note the line after
 `Backtrace:` and open an issue on GitHub with it.
 
+**The picture is sideways or upside down for how the board is mounted.**
+Change `SCREEN_ROTATION` in `firmware/AirTraffic/board_config.h` (0, 1, 2 or 3
+= quarter turns) and upload again. Touch follows automatically.
+
 **Colours are wrong (red shows as blue) or the picture is shifted.**
 Your board is a different revision. All the wiring lives in
 `firmware/AirTraffic/board_config.h`; compare it with a LovyanGFX or Arduino

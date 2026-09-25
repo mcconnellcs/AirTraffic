@@ -28,6 +28,14 @@ constexpr int SCREEN_H = 480;
 // Backlight pin (see backlight.h for how it is driven)
 constexpr int PIN_BACKLIGHT = 38;
 
+// Which way round the board is mounted. The picture is turned to match:
+//   0 = USB socket at the bottom (as the board is printed)
+//   1 = picture turned 90 degrees clockwise
+//   2 = upside down
+//   3 = picture turned 90 degrees counter-clockwise
+// Touch is turned the same way. Change this if your stand holds it sideways.
+constexpr int SCREEN_ROTATION = 3;
+
 class LGFX : public lgfx::LGFX_Device {
   lgfx::Bus_RGB      bus_;
   lgfx::Panel_ST7701_guition_esp32_4848S040 panel_;

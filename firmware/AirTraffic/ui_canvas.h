@@ -128,6 +128,9 @@ bool createLayerSprite(LGFX_Sprite& sprite);
 //  Everything else (fillSmoothCircle, drawArc, fillTriangle, drawCircle,
 //  pushSprite, ...) respects the strip and is safe.
 
+// Turns a touch on the physical glass into picture coordinates (SCREEN_ROTATION).
+void rotateTouch(int* x, int* y);
+
 // Is any part of rows [y, y+h) inside the strip being drawn right now?
 bool rowsVisible(Gfx& g, int y, int h);
 

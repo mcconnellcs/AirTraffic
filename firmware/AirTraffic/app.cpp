@@ -180,9 +180,11 @@ void onGesture(const Gesture& g, uint32_t now) {
 }
 
 void readTouch(uint32_t now) {
-  uint16_t x = 0, y = 0;
-  const bool touching = display.getTouch(&x, &y);
+  uint16_t rawX = 0, rawY = 0;
+  const bool touching = display.getTouch(&rawX, &rawY);
   if (touching) lastTouchMs = now;
+  int x = rawX, y = rawY;
+  ui::rotateTouch(&x, &y);
   Gesture g = gestures.update(touching, x, y, now);
   if (injected.type != GestureType::None) {  // a pretend touch from the serial console
     g = injected;

@@ -24,7 +24,11 @@ is how far the glow trails behind the sweep line.
 how many planes get a callsign written next to them. Set it to 30 and see why
 there's a limit.
 
-**Mission 5: A 5-mile range.** `kRangeChoicesNm` in `app_settings.h` is the
+**Mission 5: Turn it round.** `SCREEN_ROTATION` in `board_config.h` turns the
+whole picture (and touch) in quarter turns: 0, 1, 2 or 3. Handy for a stand
+that holds the board sideways.
+
+**Mission 5b: A 5-mile range.** `kRangeChoicesNm` in `app_settings.h` is the
 list the RANGE button cycles through. Add `5` at the front.
 
 ## Level 2 — Change a behaviour
