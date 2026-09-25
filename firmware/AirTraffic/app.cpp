@@ -35,6 +35,7 @@ GestureDetector gestures;
 ui::UiState ui{};
 AppSettings settings{};
 LGFX_Sprite photo;
+LGFX_Sprite logo;
 
 uint32_t snapshotSequence = 0;
 anim::Tween cardTween = anim::Tween::still(0);
@@ -43,6 +44,7 @@ anim::Tween rangeTween = anim::Tween::still(kDefaultRangeNm);
 anim::Tween scrollTween = anim::Tween::still(0);
 anim::Tween settingsTween = anim::Tween::still(0);
 bool photoDecoded = false;
+bool logoDecoded = false;
 Gesture injected{GestureType::None, 0, 0};
 uint32_t lastTouchMs = 0, lastAmbientMs = 0, fpsStartMs = 0, frames = 0;
 int ambientIndex = 0;
@@ -58,6 +60,9 @@ void openCard(const Track& t, uint32_t now) {
   photoDecoded = false;
   photo.deleteSprite();
   ui.photo = nullptr;
+  logoDecoded = false;
+  logo.deleteSprite();
+  ui.logo = nullptr;
   feed::wantDetails(t.latest.hex, t.latest.callsign, true);
   if (!cardIsOpen()) cardTween = anim::Tween::start(cardTween.valueAt(now), 1, now, kCardOpenMs);
 }
@@ -269,6 +274,20 @@ void updateData(uint32_t now) {
         }
       });
       if (ui.photo != nullptr) ui.photoReadyMs = now;
+    }
+    if (!logoDecoded && ui.haveDetails && ui.details.routeDone) {
+      const RouteInfo& route = ui.details.route;
+      if (!route.valid || route.airlineIcao[0] == '\0') {
+        logoDecoded = true;  // no airline, no logo
+      } else {
+        const feed::LogoState state = feed::withLogo(route.airlineIcao, [](const uint8_t* data, size_t length) {
+          if (ui::decodeLogo(logo, data, length)) ui.logo = &logo;
+        });
+        if (state != feed::LogoState::Pending) {
+          logoDecoded = true;
+          if (ui.logo != nullptr) ui.logoReadyMs = now;
+        }
+      }
     }
   }
 }

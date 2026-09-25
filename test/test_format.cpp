@@ -47,6 +47,13 @@ TEST_CASE("vertical rate text") {
   CHECK(s(fmt::verticalRate(1000, Units::Metric)) == "+5.1 m/s");
 }
 
+TEST_CASE("vertical rate number leaves the unit to the label") {
+  CHECK(s(fmt::verticalRateNumber(1216, Units::Aviation)) == "+1,216");
+  CHECK(s(fmt::verticalRateNumber(-640, Units::Aviation)) == "-640");
+  CHECK(s(fmt::verticalRateNumber(50, Units::Aviation)) == "LEVEL");
+  CHECK(s(fmt::verticalRateNumber(1000, Units::Metric)) == "+5.1");
+}
+
 TEST_CASE("heading text pads to three digits") {
   CHECK(s(fmt::heading(28.75f)) == "029\xC2\xB0");
   CHECK(s(fmt::heading(359.7f)) == "000\xC2\xB0");

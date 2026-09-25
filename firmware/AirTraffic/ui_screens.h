@@ -68,6 +68,8 @@ struct UiState {
   Details details;
   const LGFX_Sprite* photo;  // decoded aircraft photo, or nullptr
   uint32_t photoReadyMs;
+  const LGFX_Sprite* logo;   // decoded airline logo, or nullptr
+  uint32_t logoReadyMs;
 
   float listScroll;          // rows scrolled (animated)
   uint32_t listEnteredMs;
@@ -114,6 +116,9 @@ bool initScreens();
 
 // Decodes a JPEG photo into a sprite sized for the flight card.
 bool decodePhoto(LGFX_Sprite& sprite, const uint8_t* jpeg, size_t length);
+
+// Decodes a PNG airline logo into a sprite sized for the flight card.
+bool decodeLogo(LGFX_Sprite& sprite, const uint8_t* png, size_t length);
 
 constexpr int kListRowH = 62;
 constexpr int kListTop = 108;

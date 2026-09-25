@@ -25,6 +25,7 @@ Label shortAltitude(int32_t feet, bool onGround);              // "FL350" / "4,6
 Label speed(float knots, Units units);                         // "445 kt"
 Label distance(float nm, Units units);                         // "6.7 nm"
 Label verticalRate(int32_t fpm, Units units);                  // "+1,216 fpm"
+Label verticalRateNumber(int32_t fpm, Units units);            // "+1,216" (unit shown elsewhere)
 Label heading(float degrees);                                  // "029°"
 Label trimmed(const char* text);                               // "AAL1699 " -> "AAL1699"
 Label clock(int hour, int minute, bool use24h);                // "21:30" / "9:30 PM"

@@ -78,8 +78,9 @@ works surprisingly well.
 - **Notify your phone** when a plane passes overhead. Look up `ntfy.sh` — one
   HTTP request sends a push notification, and `net_client.cpp` already knows
   how to make requests.
-- **Show the airline logo** on the card. Where would the pictures come from?
-  How big can they be? (The photo box is 150×100 px.)
+- **Show the airline logo on the radar**, next to the plane, not just on the
+  card. `feed::withLogo()` already gives you the picture; how small can a logo
+  go and still be recognisable? What happens to the frame rate?
 - **A map behind the radar**. OpenStreetMap serves map tiles as PNG images.
   What would you need to draw one under the planes?
 - **Sound.** The board has no speaker, but it has spare pins…

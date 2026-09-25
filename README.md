@@ -30,7 +30,7 @@
 - **Smooth motion.** Positions arrive every 10 seconds; the radar predicts
   where each plane is in between (dead reckoning) and blends in each real
   update, so nothing jumps. 30 frames per second.
-- **Tap a plane** for its card: callsign, airline, aircraft type and
+- **Tap a plane** for its card: airline logo, callsign, airline, aircraft type and
   registration, route with a live progress bar (Charlotte → New York, 62%),
   altitude with climb/descent arrow, speed, distance and direction, heading,
   squawk, and a photo of the actual aircraft when one exists.
@@ -138,7 +138,9 @@ tools/               screenshot.py, fonts/make_fonts.py
   from-scratch Arduino rewrite for a different board, aimed at beginners.
 - Flight data by the volunteers feeding [adsb.lol](https://adsb.lol) and
   [adsb.fi](https://adsb.fi); routes and aircraft facts from
-  [adsbdb.com](https://adsbdb.com); photos via airport-data.com;
+  [adsbdb.com](https://adsbdb.com); photos via airport-data.com; airline
+  logos from [esp32flight-logos](https://github.com/theqkash/esp32flight-logos)
+  (trademarks of their airlines, shown only to identify them);
   location from [ipwho.is](https://ipwho.is).
 - Graphics by [LovyanGFX](https://github.com/lovyan03/LovyanGFX), JSON by
   [ArduinoJson](https://arduinojson.org), Wi-Fi setup by

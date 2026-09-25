@@ -65,6 +65,25 @@ const char* stateName(FeedState state);
 void wantDetails(const char* hex, const char* callsign, bool focus);
 bool details(const char* hex, Details* out);
 
+// Airline logos (PNG bytes) by ICAO airline code, e.g. "AAL".
+enum class LogoState { Pending, Ready, None };  // None = the airline has no logo
+template <typename Fn>
+LogoState withLogo(const char* icao, Fn use);
+LogoState lockLogo(const char* icao, const uint8_t** data, size_t* length);
+void unlockLogo();
+
+template <typename Fn>
+LogoState withLogo(const char* icao, Fn use) {
+  const uint8_t* data = nullptr;
+  size_t length = 0;
+  const LogoState state = lockLogo(icao, &data, &length);
+  if (state == LogoState::Ready) {
+    use(data, length);
+    unlockLogo();
+  }
+  return state;
+}
+
 // The photo of the focused plane (JPEG bytes). Returns false if not ready.
 // `use` is called while the photo is locked, so don't keep the pointer.
 template <typename Fn>

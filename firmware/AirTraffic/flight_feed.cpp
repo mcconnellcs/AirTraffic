@@ -30,6 +30,10 @@ constexpr uint32_t kPrefetchGapMs = 1200;   // be polite: at most ~1 route looku
 constexpr size_t kCacheSize = 48;
 constexpr size_t kPrefetchCount = 12;       // look up routes for the 12 nearest planes
 constexpr size_t kMaxPhotoBytes = 80 * 1024;
+// Airline logos, by ICAO code, from the esp32flight project's collection.
+constexpr const char* kLogoUrl = "https://raw.githubusercontent.com/theqkash/esp32flight-logos/main/logos/%s.png";
+constexpr size_t kMaxLogoBytes = 40 * 1024;
+constexpr size_t kLogoCacheSize = 12;
 constexpr int kMaxQueryRadiusNm = 250;
 
 struct CacheEntry {
@@ -54,6 +58,16 @@ Request focus{};
 bool haveFocus = false;
 bool demoMode = false;
 uint32_t demoStartMs = 0;
+
+struct LogoEntry {
+  char icao[4];
+  uint8_t* png;     // nullptr = this airline has no logo (remembered so we don't ask again)
+  size_t length;
+  uint32_t usedMs;
+};
+
+std::mutex logoLock;   // protects the logo cache
+std::vector<LogoEntry> logos;
 
 std::mutex photoLock;  // protects the photo
 char photoHex[8] = "";
@@ -300,6 +314,42 @@ void fetchPhoto(const Request& r, const char* url) {
   copyText(photoHex, r.hex);
 }
 
+LogoEntry* findLogo(const char* icao) {  // caller must hold logoLock
+  for (LogoEntry& e : logos) {
+    if (strcmp(e.icao, icao) == 0) return &e;
+  }
+  return nullptr;
+}
+
+bool logoKnown(const char* icao) {
+  std::lock_guard<std::mutex> guard(logoLock);
+  return findLogo(icao) != nullptr;
+}
+
+void fetchLogo(const char* icao) {
+  char url[128];
+  snprintf(url, sizeof(url), kLogoUrl, icao);
+  uint8_t* data = nullptr;
+  size_t length = 0;
+  net::getBytes(url, &data, &length, kMaxLogoBytes);  // stays null if there is no logo
+
+  std::lock_guard<std::mutex> guard(logoLock);
+  if (logos.size() >= kLogoCacheSize) {  // forget the one used longest ago
+    size_t oldest = 0;
+    for (size_t i = 1; i < logos.size(); i++) {
+      if (logos[i].usedMs < logos[oldest].usedMs) oldest = i;
+    }
+    heap_caps_free(logos[oldest].png);
+    logos.erase(logos.begin() + oldest);
+  }
+  LogoEntry e{};
+  copyText(e.icao, icao);
+  e.png = data;
+  e.length = length;
+  e.usedMs = millis();
+  logos.push_back(e);
+}
+
 // Does one piece of detail work for the focused plane. Returns true if it did.
 bool workOnFocus() {
   Request r{};
@@ -317,6 +367,12 @@ bool workOnFocus() {
   }
   if (!d.aircraftDone) {
     fetchAircraft(r);
+    return true;
+  }
+
+  const char* airline = d.route.valid ? d.route.airlineIcao : "";
+  if (airline[0] && safeForUrl(airline) && !logoKnown(airline)) {
+    fetchLogo(airline);
     return true;
   }
 
@@ -490,6 +546,22 @@ bool details(const char* hex, Details* out) {
   *out = e->details;
   return true;
 }
+
+LogoState lockLogo(const char* icao, const uint8_t** data, size_t* length) {
+  logoLock.lock();
+  LogoEntry* e = findLogo(icao);
+  if (e == nullptr || e->png == nullptr) {
+    const LogoState state = e == nullptr ? LogoState::Pending : LogoState::None;
+    logoLock.unlock();
+    return state;
+  }
+  e->usedMs = millis();
+  *data = e->png;
+  *length = e->length;
+  return LogoState::Ready;  // caller must unlockLogo()
+}
+
+void unlockLogo() { logoLock.unlock(); }
 
 bool lockPhoto(const char* hex, const uint8_t** data, size_t* length) {
   photoLock.lock();

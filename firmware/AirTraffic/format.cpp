@@ -77,6 +77,13 @@ Label verticalRate(int32_t fpm, Units units) {
   return Label::printf("%s%s fpm", sign, thousands(labs(fpm)).c_str());
 }
 
+Label verticalRateNumber(int32_t fpm, Units units) {
+  if (labs(fpm) < kLevelFlightFpm) return Label::printf("LEVEL");
+  const char* sign = fpm > 0 ? "+" : "-";
+  if (units == Units::Metric) return Label::printf("%s%.1f", sign, fabsf(fpm * kFpmToMps));
+  return Label::printf("%s%s", sign, thousands(labs(fpm)).c_str());
+}
+
 Label heading(float degrees) {
   long rounded = lroundf(degrees) % 360;
   if (rounded < 0) rounded += 360;

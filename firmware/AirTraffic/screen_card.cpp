@@ -13,6 +13,7 @@ namespace {
 
 constexpr int kPad = 22;
 constexpr int kPhotoW = 150, kPhotoH = 100;
+constexpr int kLogoPx = 48;
 constexpr uint32_t kCountUpMs = 900;  // numbers "roll up" to their value when the card opens
 
 // Values count up from zero when the card opens — a small touch that feels alive.
@@ -51,6 +52,19 @@ void drawPhotoBox(Gfx& g, const UiState& s, const Flight& f, int x, int y) {
   planeIcon(g, x + kPhotoW / 2, y + 42, 45, 52, anim::blend565(theme::kSurfaceHi, c, 0.8f));
   text(g, f.type[0] ? f.type : "----", x + kPhotoW / 2, y + 74, theme::Font::Hud, theme::kTextDim,
        Align::Center);
+}
+
+void drawLogoBox(Gfx& g, const UiState& s, int x, int y) {
+  if (!rowsVisible(g, y, kLogoPx)) return;
+  if (s.logo != nullptr) {
+    const_cast<LGFX_Sprite*>(s.logo)->pushSprite(&g, x, y);
+    const float fade = 1.0f - anim::easeOutCubic(anim::progress(s.logoReadyMs, s.now, 400));
+    if (fade > 0.01f) blendRect(g, x, y, kLogoPx, kLogoPx, theme::kSurface, fade);
+    return;
+  }
+  // No logo (yet, or ever): a quiet placeholder so the layout never jumps.
+  roundedRect(g, x, y, kLogoPx, kLogoPx, 10, theme::kSurfaceHi);
+  planeIcon(g, x + kLogoPx / 2, y + kLogoPx / 2, 45, 26, theme::kTextMuted);
 }
 
 void drawRoute(Gfx& g, const UiState& s, const Flight& f, int y) {
@@ -142,7 +156,8 @@ void buildStatsImpl(const UiState& s, const Flight& f, geo::LatLon pos, Stat* st
   stats[1] = {"SPEED", spd, theme::kText, 2};
   stats[2] = {"DISTANCE", dstDir, theme::kText, 2};
   stats[3] = {"HEADING", f.hasTrack ? fmt::heading(f.trackDeg) : fmt::Label::printf("---"), theme::kText, 2};
-  stats[4] = {"CLIMB", fmt::verticalRate(f.vrateFpm, u), trend > 0 ? theme::kAccent : trend < 0 ? theme::kWarning : theme::kText, 2};
+  stats[4] = {u == fmt::Units::Metric ? "CLIMB M/S" : "CLIMB FPM", fmt::verticalRateNumber(f.vrateFpm, u),
+              trend > 0 ? theme::kAccent : trend < 0 ? theme::kWarning : theme::kText, 2};
   stats[5] = {"SQUAWK", fmt::Label::printf("%s", f.squawk[0] ? f.squawk : "----"), emergency ? theme::kEmergency : theme::kText, 2};
 }
 
@@ -167,21 +182,22 @@ void drawCard(Gfx& g, const UiState& s) {
   glassPanel(g, 0, top, SCREEN_W, SCREEN_H - top + 30, 26, theme::kSurface);
   roundedRect(g, SCREEN_W / 2 - 22, top + 9, 44, 5, 2, theme::kGridBright);
 
-  // Header: callsign, airline, type.
+  // Header: logo, callsign, airline, type.
   const int y = top + 24;
-  text(g, f.callsign, kPad, y, theme::Font::Display, theme::kText);
+  drawLogoBox(g, s, kPad, y + 2);
+  text(g, f.callsign, kPad + kLogoPx + 12, y, theme::Font::Display, theme::kText);
   const char* airline = s.haveDetails && s.details.route.valid && s.details.route.airline[0]
                             ? s.details.route.airline
                         : f.owner[0] ? f.owner
                         : s.haveDetails && s.details.aircraft.owner[0] ? s.details.aircraft.owner
                                                                         : "Private aircraft";
-  text(g, airline, kPad, y + 50, theme::Font::BodyBold, theme::kAccent);
+  text(g, airline, kPad, y + 54, theme::Font::BodyBold, theme::kAccent);
   const char* model = f.desc[0] ? f.desc
                       : s.haveDetails && s.details.aircraft.model[0] ? s.details.aircraft.model
                                                                      : f.type;
   char line[64];
   snprintf(line, sizeof(line), "%s%s%s", model, f.reg[0] ? "  \xC2\xB7  " : "", f.reg);
-  text(g, line, kPad, y + 72, theme::Font::Label, theme::kTextDim);
+  text(g, line, kPad, y + 76, theme::Font::Label, theme::kTextDim);
   drawPhotoBox(g, s, f, SCREEN_W - kPad - kPhotoW, y);
 
   if (fmt::isEmergencySquawk(f.squawk) && rowsVisible(g, y - 22, 20)) {
@@ -191,6 +207,16 @@ void drawCard(Gfx& g, const UiState& s) {
 
   drawRoute(g, s, f, y + 116);
   drawStats(g, s, f, pos, y + 188);
+}
+
+bool decodeLogo(LGFX_Sprite& sprite, const uint8_t* png, size_t length) {
+  // Logos are 90x90 with see-through corners; shrink onto the card colour.
+  sprite.deleteSprite();
+  sprite.setPsram(true);
+  sprite.setColorDepth(16);
+  if (!sprite.createSprite(kLogoPx, kLogoPx)) return false;
+  sprite.fillScreen(theme::kSurface);
+  return sprite.drawPng(png, length, 0, 0, kLogoPx, kLogoPx, 0, 0, 0.0f, 0.0f, textdatum_t::middle_center);
 }
 
 bool decodePhoto(LGFX_Sprite& sprite, const uint8_t* jpeg, size_t length) {

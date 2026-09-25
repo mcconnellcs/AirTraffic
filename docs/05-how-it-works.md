@@ -52,6 +52,11 @@ The reply is **JSON**, a text format that looks like this:
 `parsers.cpp` uses the ArduinoJson library to pull those fields out into a
 `Flight` struct (`flight.h`). If the first website is down we try a second one.
 
+When you open a card, the same task looks up the route and aircraft facts on
+adsbdb.com, then fetches the airline logo (a small PNG, by ICAO airline code,
+from the esp32flight-logos collection) and a photo of the aircraft. Logos are
+kept in a small cache so the same airline is only downloaded once.
+
 **Why HTTPS works without any setup:** the ESP32 core ships with the same list
 of trusted certificate authorities a web browser uses, so the board can check
 it's really talking to adsb.lol.
