@@ -1,0 +1,61 @@
+# Runs on every push and pull request:
+#   1. the host unit tests (the maths, parsers and animation code)
+#   2. a real firmware build with the exact library versions the README lists
+# The compiled firmware is attached to the run as a downloadable artifact.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+env:
+  ESP32_CORE: "3.3.12"
+  LOVYANGFX: "1.2.30"
+  ARDUINOJSON: "7.4.3"
+  WIFIMANAGER: "2.0.17"
+  FQBN: "esp32:esp32:esp32s3:PSRAM=opi,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB"
+
+jobs:
+  host-tests:
+    name: Host unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch ArduinoJson (header-only)
+        run: git clone --depth 1 --branch v${{ env.ARDUINOJSON }} https://github.com/bblanchon/ArduinoJson.git /tmp/ArduinoJson
+      - name: Build and run tests
+        run: make -C test ARDUINOJSON=/tmp/ArduinoJson/src
+
+  firmware:
+    name: Compile firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install the ESP32 core and libraries
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@${{ env.ESP32_CORE }}
+          arduino-cli lib install "LovyanGFX@${{ env.LOVYANGFX }}" "ArduinoJson@${{ env.ARDUINOJSON }}" "WiFiManager@${{ env.WIFIMANAGER }}"
+      - name: Compile BoardTest
+        run: arduino-cli compile --fqbn "$FQBN" --warnings default --output-dir build/BoardTest firmware/BoardTest
+      - name: Compile AirTraffic
+        run: arduino-cli compile --fqbn "$FQBN" --warnings default --output-dir build/AirTraffic firmware/AirTraffic
+      - name: Keep the firmware files
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            build/AirTraffic/AirTraffic.ino.merged.bin
+            build/BoardTest/BoardTest.ino.merged.bin
+      - name: Attach to the release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/AirTraffic/AirTraffic.ino.merged.bin
+            build/BoardTest/BoardTest.ino.merged.bin
