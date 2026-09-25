@@ -1,0 +1,18 @@
+# Compiled firmware and test binaries
+build/
+test/build/
+*.elf
+*.map
+
+# Editor and OS clutter
+.DS_Store
+.vscode/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+
+# Never commit Wi-Fi passwords or personal settings. AirTraffic keeps them on
+# the board itself, so there should be nothing like that here anyway.
+*.secret
