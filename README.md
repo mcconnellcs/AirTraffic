@@ -1,7 +1,7 @@
 <h1 align="center">AirTraffic</h1>
 
 <p align="center">
-  A personal flight radar for your desk, on a $20 touchscreen.<br>
+  A personal flight radar for your desk, on a touchscreen.<br>
   Every aircraft near you, live, with a proper radar sweep, contrails and a
   card that tells you where each plane is going.<br>
   No server, no subscription, no API keys, no passwords in the code.
