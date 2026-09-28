@@ -2,6 +2,13 @@
 
 *Compile* means turning code into a program. *Upload* (or *flash*) means
 copying that program to the board. Upload replaces the factory demo.
+A program that lives inside a device like this is called *firmware*.
+Unfamiliar word? See the [glossary](glossary.md).
+
+> **Why "flash"?** The board's storage is *flash memory*, the same kind used
+> in USB sticks and phones, so writing a program into it became known as
+> "flashing". It keeps the program with the power off, which is why you only
+> upload once and the radar then starts by itself every time it is plugged in.
 
 ## Step 1 — Download and unzip the whole project
 
@@ -17,7 +24,21 @@ Keep the whole folder together. Do not copy just the `.ino` file into a new
 sketch: it needs the adjacent `.h` and `.cpp` files. You do not need a GitHub
 account or Git. If you already use Git, cloning the repository also works.
 
+> **Why so many files?** A program this size is split into pieces that each
+> do one job: one file knows about Wi-Fi, another draws the radar, another does
+> the map maths. That makes each piece small enough to understand and lets you
+> change one without breaking the others. The `.ino` file is only the front
+> door. The Arduino IDE builds every file in the sketch's folder together.
+> [How it works](05-how-it-works.md#where-things-live) lists what each one does.
+
 ## Step 2 — Upload BoardTest
+
+> **Why test the board first?** BoardTest is about 100 lines and uses no
+> Wi-Fi. If it fails, the problem must be the board, the cable or the Tools
+> settings, because there is almost nothing else it could be. If you went
+> straight to AirTraffic and saw a blank screen, there would be dozens of
+> possible causes. Testing the simplest thing first, and changing one thing at
+> a time, is the most useful debugging habit there is.
 
 1. In Arduino IDE choose **File ▸ Open…**, navigate into the extracted folder,
    and open **firmware ▸ BoardTest ▸ BoardTest.ino**.
@@ -26,6 +47,9 @@ account or Git. If you already use Git, cloning the repository also works.
 3. Click the **✓ Verify** button at the top left. Wait for compilation to
    finish. If it fails, fix the **first error** using
    [Troubleshooting](troubleshooting.md); do not proceed to AirTraffic yet.
+   (*Verify* only compiles. It checks the code and your settings without
+   touching the board, so it is always safe to press. One mistake often causes
+   a whole list of errors; fixing the first usually clears the rest.)
 4. Click **→ Upload**. Keep the board connected until the IDE reports that
    uploading completed. `Writing at…`, verification messages, and
    `Hard resetting via RTS pin…` are normal.
@@ -42,6 +66,21 @@ again to see the report. Flash should be **16777216 bytes** (16 MB), PSRAM
 should be nonzero, and touching should print `Touch at x,y`. The message
 `Touch driver: OK` alone does not prove touch works; actually touch the glass.
 
+> **What each check proves.** The screen receives every pixel's colour over
+> 16 separate wires: 5 for red, 6 for green, 5 for blue. A solid red bar
+> proves the red wires work, and so on; white uses all 16 at once. A colour
+> that looks wrong points to a wiring or settings problem. **FPS** is *frames
+> per second*: how many complete pictures are drawn each second.
+>
+> **Why 115200?** *Baud* is the speed of the serial link in bits per second.
+> The program on the board sends at 115200, so Serial Monitor must listen at
+> 115200. If the two disagree you get a stream of nonsense characters, a bit
+> like playing a record at the wrong speed. Nothing is broken; change the
+> number and press RST.
+>
+> **Why 16777216?** Computers count in powers of two. 16 MB is
+> 16 × 1024 × 1024 bytes.
+
 **Checkpoint:** all four colours look right, the line moves, and the dot
 tracks touches across the screen. If any check fails, stop here and use
 [Troubleshooting](troubleshooting.md#the-screen).
@@ -57,6 +96,26 @@ tracks touches across the screen. If any check fails, stop here and use
 This button sequence puts the chip into its download mode; it does not erase
 settings by itself. Button labels can be **EN** instead of RST or **IO0**
 instead of BOOT. If your enclosure hides them, disconnect USB before opening it.
+
+<details>
+<summary><b>Learn more:</b> what BOOT and RST actually do</summary>
+
+When the ESP32 starts, the first thing to run is a tiny built-in program
+called the *bootloader*. It makes one decision: start the program stored in
+flash, or wait to receive a new one over the serial connection (*download
+mode*). It decides by checking one pin, **IO0**, at the moment of reset.
+
+- **RST** (reset, also labelled **EN**) restarts the chip, like switching it
+  off and on.
+- **BOOT** is wired to IO0. Holding it down while the chip resets tells the
+  bootloader "wait for a new program".
+
+Normally you never touch them. The CH340 chip has two spare control lines,
+and the uploader uses them to press both buttons electronically. That is what
+`Hard resetting via RTS pin…` means at the end of an upload. The manual
+sequence is only needed when that automatic trick fails.
+
+</details>
 
 ## Step 3 — Upload AirTraffic
 
@@ -120,6 +179,15 @@ Press RST and complete the colour/motion/touch checks above. Then:
 ```sh
 ./airtraffic-flash-env/bin/python -m esptool --chip esp32s3 --port /dev/cu.usbserial-XXXX --baud 460800 write-flash 0x0 AirTraffic.ino.merged.bin
 ```
+
+> **What these commands mean.** `python3 -m venv` makes a *virtual
+> environment*: a private folder for Python tools, so installing esptool
+> cannot disturb anything else on the Mac. **esptool** is Espressif's
+> uploader, the same one the Arduino IDE runs behind the scenes. `0x0` is an
+> address in the flash memory, written in *hexadecimal* (base 16, marked by
+> `0x`); it means "start writing at the very beginning". A *merged* image is
+> the bootloader, the partition table and the program joined into one file,
+> which is why it must start at zero.
 
 Use **only the `.merged.bin` image at address `0x0`**. A plain `.ino.bin` is
 not interchangeable. A merged image also writes the intervening flash sectors,

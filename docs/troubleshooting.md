@@ -3,6 +3,17 @@
 Start with **Tools ▸ Serial Monitor**, **115200 baud**, and **New Line**.
 Press and release **RST** (sometimes labelled EN) to see messages from startup.
 `status` and `help` work in AirTraffic; BoardTest only prints its test report.
+Unfamiliar word? See the [glossary](glossary.md).
+
+> **How to debug anything.** Something not working is a normal part of every
+> project, not a sign you did it wrong. Four habits solve most problems:
+>
+> 1. **Read the message.** The first error, or the last line before it
+>    stopped, usually says what is wrong.
+> 2. **Test the simplest thing.** Does BoardTest work? Does another cable?
+> 3. **Change one thing at a time**, and test after each change. Change three
+>    things at once and you won't know which one fixed it.
+> 4. **Go back to what last worked**, then move forward in small steps.
 
 ## Uploading
 
@@ -55,7 +66,9 @@ Check **OPI PSRAM** and upload again. Both sketches need PSRAM even before they
 can draw their first complete screen. The firmware stops if required startup
 resources fail; read Serial Monitor rather than waiting for the screen.
 Run BoardTest before debugging AirTraffic. Its report should show 16 MB flash
-and nonzero PSRAM. The backlight is on/off through GPIO 38, not PWM dimming.
+and nonzero PSRAM. The backlight is on/off through GPIO 38 (one of the chip's
+pins), not PWM dimming (flickering a light faster than the eye can see to make
+it look dimmer), so there is no brightness setting.
 
 **It restarts repeatedly / “Guru Meditation Error” / brownout message.**
 Recheck all [board settings](02-install-arduino.md#step-5--set-the-board-options).
@@ -146,9 +159,19 @@ automatic geolocation fails.
 
 **“RETRYING” or feed errors.**
 The board retries after a pause of about ten seconds; slow downloads can make
-it longer. Read `[net]` messages: DNS failures suggest network problems,
-HTTP 403 means access was refused, 429 means rate limiting, and 5xx indicates
-a server problem. Both feeds are external services and can be unavailable.
+it longer. Read `[net]` messages. Every reply from a website starts with a
+three-digit *status code*:
+
+| Code | Meaning |
+|---|---|
+| 200 | OK |
+| 403 | Forbidden: the site refused the request |
+| 404 | Not found: for example, no route is known for that flight |
+| 429 | Too many requests: you are being *rate limited* |
+| 500–599 | The website itself has a problem |
+
+A **DNS** failure means the board could not look up the site's address, which
+points to your network rather than the site. Both feeds are external services and can be unavailable.
 Do not shorten the refresh interval to work around this. Existing positions
 may remain visible and are not fresh while errors continue.
 

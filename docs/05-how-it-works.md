@@ -1,6 +1,7 @@
 # 5. How it works
 
 You don't need to read this to use the radar. Read it when you want to change it.
+Unfamiliar word? See the [glossary](glossary.md).
 
 ## The big picture
 
@@ -15,8 +16,12 @@ flowchart LR
 ```
 
 Many aircraft carry a transmitter that broadcasts position, altitude, and
-speed using **ADS-B**. Reception depends on the aircraft equipment and nearby
-receivers.
+speed using **ADS-B** (Automatic Dependent Surveillance–Broadcast). The name
+describes it: *automatic* because the pilot does nothing, *dependent* because
+it depends on the aircraft's own GPS, *surveillance* because it is for keeping
+track of aircraft, and *broadcast* because it is sent to anyone listening
+rather than to one receiver. Reception depends on the aircraft equipment and
+nearby receivers.
 Thousands of hobbyists run cheap receivers and pool what they hear on free
 websites. We ask one of those websites: *"what's flying within 25 nautical miles of
 here?"* and it answers with a list.
@@ -42,7 +47,11 @@ After each position download we wait ten seconds before fetching again.
 Network delays can lengthen that interval. For the default 25 NM view, we use a
 slightly larger query radius to include approaching aircraft, with a URL like
 `https://api.adsb.lol/v2/point/32.77/-79.93/35` (latitude, longitude, radius).
-The reply is **JSON**, a text format that looks like this:
+
+A web address like that, made for programs rather than people, is called an
+**API** (Application Programming Interface). You can paste it into a browser
+and see exactly what the board sees. The reply is **JSON** (JavaScript Object
+Notation), a text format that looks like this:
 
 ```json
 {"ac": [
@@ -52,8 +61,22 @@ The reply is **JSON**, a text format that looks like this:
 ]}
 ```
 
+JSON is built from two ideas: `{ }` holds named values, and `[ ]` holds a
+list. So the reply above is one object with a list called `ac` (aircraft),
+and each aircraft is an object with its own named values. Almost every web
+service you will ever use speaks JSON.
+
 `parsers.cpp` uses the ArduinoJson library to pull those fields out into a
 `Flight` struct (`flight.h`). If the first website is down we try a second one.
+
+> **Why two websites?** Free services run by volunteers go down sometimes.
+> Asking a second source when the first fails is called *failover*, and it is
+> why a fault at one website doesn't stop your radar.
+>
+> **Why every ten seconds, and not every second?** These services are free and
+> shared by thousands of people. Asking more often than you need is rude, and
+> gets you blocked. The radar fills the gaps by estimating (step 5 below), so
+> it looks smooth without asking more.
 
 When you open a card, the same task looks up the route and aircraft facts on
 adsbdb.com, then fetches the airline logo (a small PNG, by ICAO airline code,
@@ -75,8 +98,12 @@ freeze every 10 seconds. So:
 - **Core 1** runs Arduino's `loop()`: Wi-Fi setup processing, touch, animation,
   and drawing. Network scans can briefly pause this loop.
 
-They share data through a **mutex** — a lock that means "only one core may
-touch this at a time".
+They share data through a **mutex** (short for *mutual exclusion*) — a lock
+that means "only one core may touch this at a time". Without it, core 1
+could read the list of planes while core 0 was halfway through replacing it,
+and draw a mixture of old and new. Bugs like that are called *race
+conditions*, and they are hard to find because they only happen when the
+timing is unlucky.
 
 ### 5. Filling in the gaps (`sky_model.cpp`)
 
@@ -97,7 +124,10 @@ downloads leave the last known tracks on screen, with an error indicator.
 
 A 480×480 picture is 460 KB. That only fits in the board's slow external
 memory (PSRAM), and redrawing it there took 130 ms per frame — 7 frames a
-second. Three tricks got it to 30:
+second. (At 30 frames a second there are only 33 milliseconds to draw each
+one.) Nobody guessed what was slow: each part of the drawing was timed with a
+stopwatch in the code, and the slowest part was fixed first. That is called
+*profiling*. Three tricks got it to 30:
 
 1. **Strips.** The screen is drawn in 10 horizontal strips of 48 rows. A strip
    is 46 KB, small enough for the ESP32's fast internal RAM. The drawing code

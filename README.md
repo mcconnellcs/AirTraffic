@@ -63,6 +63,26 @@ board** as the working project; similarly named displays can have different wiri
 4. [Connect Wi-Fi and check the radar](docs/04-first-boot.md). Try `demo` if
    no real aircraft are nearby, then restart to check saved Wi-Fi reconnects.
 
+### What you'll learn along the way
+
+The guides explain *why* as well as *what*. Short **Why?** notes sit beside
+the steps, longer **Learn more** sections fold out if you want them, and every
+abbreviation is in the [glossary](docs/glossary.md). By the end you will have
+met:
+
+- **Hardware:** what a microcontroller is, the difference between flash
+  storage and working memory, and why a USB cable can be the wrong kind.
+- **Tools:** compiling and uploading, libraries, and why projects pin exact
+  versions.
+- **Networking:** 2.4 GHz and 5 GHz Wi-Fi, IP addresses, HTTP and HTTPS, and
+  why passwords never belong in source code.
+- **Data:** how a program asks a website for information and reads the JSON
+  that comes back.
+- **Aviation:** how aircraft announce their position (ADS-B), and what
+  callsigns, squawk codes, knots and flight levels mean.
+- **Debugging:** testing the simplest thing first, reading the first error,
+  and using the Serial Monitor to see what a device is thinking.
+
 **Success looks like:** BoardTest passes, AirTraffic responds to touch,
 `status` reports a live feed (even if empty), and Wi-Fi reconnects after unplugging.
 If a checkpoint fails, use [Troubleshooting](docs/troubleshooting.md).
@@ -90,6 +110,7 @@ Written for someone building their first ESP32 project.
 5. [How it works](docs/05-how-it-works.md) — ADS-B, JSON, two cores, dead reckoning, strips
 6. [Level-up missions](docs/06-level-up-missions.md) — ideas to try after the basic build works
 7. [Troubleshooting](docs/troubleshooting.md)
+8. [Glossary](docs/glossary.md) — every abbreviation and technical word, explained
 
 ## Using it
 

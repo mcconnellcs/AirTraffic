@@ -7,6 +7,14 @@ everyone learns this.
 
 The Serial Monitor (**Tools ▸ Serial Monitor**, 115200 baud, **New Line**) shows the board's
 messages, and typing `demo` gives you planes to look at even without Wi-Fi.
+Unfamiliar word? See the [glossary](glossary.md).
+
+> **Reading the code.** Names beginning with `k`, like `kSweepPeriodMs`, are
+> *constants*: values fixed when the program is built. The ending tells you
+> the unit: `Ms` is milliseconds (thousandths of a second), `Nm` is nautical
+> miles, `Deg` is degrees, `Px` is pixels. Lines starting with `//` are
+> comments, notes for people that the compiler ignores. The code is full of
+> them; they are there to be read.
 
 ## Level 1 — Change a number
 
