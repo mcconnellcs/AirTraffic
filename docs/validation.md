@@ -83,6 +83,35 @@ under Python 3.12. The default Python 3.9 was too old for esptool 5; the guide
 now calls this out. Coverage tooling also ran successfully. Its report covers
 selected pure-logic files, not the whole firmware.
 
+## Independent re-check (2026-09-28)
+
+A second pass repeated the beginner's route from a fresh **Download ZIP** of
+`main` on the same Mac and board, using Arduino CLI with the documented settings:
+
+- Every option name and value in the [Tools settings table](02-install-arduino.md#step-5--set-the-board-options)
+  was compared with the ESP32 core 3.3.12 definition of **ESP32S3 Dev Module**;
+  all match, including the listed **460800** upload speed.
+- Both sketches compiled from the unzipped `AirTraffic-main` folder and uploaded
+  at 460800 baud. BoardTest reported 16,777,216 bytes flash, 8,384,788 bytes
+  free PSRAM, `Touch driver: OK`, and about 19 FPS.
+- After uploading AirTraffic, the saved Wi-Fi network was rejoined and the first
+  flights arrived within about 35 seconds. `status`, `help`, and an unknown
+  command produced the replies the guides describe. Saved settings survived.
+- The ready-made-firmware commands were run with esptool 5.4.0 under Python
+  3.12 (`write-flash`, port listing, and a read-only chip check of this board).
+  Installing esptool 5.4.0 under the Mac's bundled Python 3.9 failed, as the
+  guide warns. The optional tools in `tools/requirements.txt` installed under
+  Python 3.9.
+- Opening the serial port from a script did **not** restart the board on this
+  Mac, while the earlier session saw restarts. Guide 4 now says to wait for the
+  radar if the start-up animation plays when Serial Monitor opens.
+- The README screenshots were recaptured in demo mode so they show simulated
+  flights rather than a real location.
+
+Arduino IDE itself was not installed on the reviewing Mac, so its windows and
+installation dialogs were not clicked through. The settings it displays come
+from the same core definition that was checked above.
+
 ## Checklist for the beginner's own build
 
 Repeat these checks on his Mac and board. A fresh Arduino IDE installation on

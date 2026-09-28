@@ -54,8 +54,9 @@ so high cruisers look small and low planes look big (hint: `b.track->latest.altF
 
 ## Level 3 — Add something new
 
-**Mission 10: One more stat on the card.** In `screen_card.cpp`, `drawStats()`
-builds a list of six `Stat` boxes. Add a seventh: the ICAO type code
+**Mission 10: One more stat on the card.** In `screen_card.cpp`,
+`buildStatsImpl()` fills in six `Stat` boxes and `drawStats()` lays them out
+in two rows of three. Add a seventh: the ICAO type code
 (`f.type`), or the aircraft `category` ("A3" = large airliner, "A7" =
 helicopter). You'll need to move things around to make it fit — that's design.
 

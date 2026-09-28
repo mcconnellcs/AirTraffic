@@ -143,7 +143,7 @@ motion its feel.
 | `ui_icons.cpp`               | The rotating aircraft symbol                          |
 | `screen_*.cpp`, `ui_chrome.cpp` | The screens                                        |
 | `demo_flights.*`             | The pretend planes for `demo` mode                    |
-| `serial_console.*`           | `demo`, `shot`, `tap`, `swipe`, `hold`                |
+| `serial_console.*`           | Serial Monitor commands: `status`, `scan`, `demo`, ... |
 | `test/`                      | Unit tests that run on your computer                  |
 
 ## Testing without a board

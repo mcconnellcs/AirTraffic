@@ -20,7 +20,8 @@
 | ![Nearby flights](docs/images/list.png) | ![Settings](docs/images/settings.png) |
 | ![Start-up](docs/images/boot.png) | ![Wi-Fi setup](docs/images/setup.png) |
 
-*Real screenshots, pulled off the board over USB with `tools/screenshot.py`.*
+*Real screenshots, pulled off the board over USB with `tools/screenshot.py`.
+The radar, list and card show the built-in demo flights.*
 
 ## What it does
 

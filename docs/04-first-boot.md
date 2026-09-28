@@ -49,11 +49,15 @@ restart the board if needed to return to its saved connection.
 ## First success check
 
 Open **Tools ▸ Serial Monitor** in Arduino IDE. Set **115200 baud** and choose
-**New Line** in the line-ending selector. Type `status` into the input box
+**New Line** in the line-ending selector. Opening Serial Monitor can restart
+the board; if the start-up animation plays, **wait until the radar is back**
+(about 20 seconds) before going on. Then type `status` into the input box
 and press Return. Commands need a line ending; **No line ending** will not work.
 
-Look for **Wi-Fi connected**, **feed: live**, and source **adsb.lol** or
-**adsb.fi**. A live feed with zero nearby aircraft is still a successful build.
+The reply is three lines starting with `[status]`. Look for **Wi-Fi
+connected**, **feed: live**, and source **adsb.lol** or **adsb.fi**. If it
+says `waiting for Wi-Fi`, `locating` or `loading`, the board is still starting:
+wait ten seconds and send `status` again. A live feed with zero nearby aircraft is still a successful build.
 The green/live indicator confirms a successful download, not complete coverage.
 
 Unplug USB for a few seconds and reconnect it. The board should reconnect

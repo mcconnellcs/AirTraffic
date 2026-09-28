@@ -69,6 +69,12 @@ instead of BOOT. If your enclosure hides them, disconnect USB before opening it.
 4. The board restarts into the AirTraffic animation. On a fresh board it
    should show **Let's get connected** and a QR code. If it already remembers
    a working Wi-Fi network, it can go directly to the radar.
+5. **Which way is up?** AirTraffic is drawn a quarter-turn round from
+   BoardTest, so that it is upright in the stand this project uses. Turn the
+   board until the AIRTRAFFIC title is at the top. If BoardTest looked
+   upright and AirTraffic looks sideways, nothing is wrong. To draw it a
+   different way round, see `SCREEN_ROTATION` in
+   [Troubleshooting](troubleshooting.md#the-screen).
 
 No code edits, Wi-Fi password file, filesystem upload, or font generation are
 needed. After upload, the program survives unplugging. A normal sketch upload
