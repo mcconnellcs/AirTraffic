@@ -1,75 +1,124 @@
 # 4. First boot and Wi-Fi
 
-The first time it starts, AirTraffic doesn't know your Wi-Fi yet. Instead of
-making you type a password into the code (which you'd then have to keep secret),
-it becomes a little Wi-Fi hotspot and asks you from your phone.
+On a fresh board, AirTraffic creates a setup hotspot so you can enter Wi-Fi
+settings from your phone. You never put the Wi-Fi password in the source code.
+If the board remembers a working network, it can skip setup.
 
 ![Setup screen](images/setup.png)
 
 ## Connect it to your Wi-Fi
 
-1. On your phone, open the Wi-Fi settings and join the network called
-   **AirTraffic-Setup**. There's no password. (Or scan the QR code on the screen.)
-2. A setup page pops up by itself. If it doesn't within a few seconds, open a
-   browser and go to **192.168.4.1**.
-3. Tap **Configure WiFi**, pick your home network from the list, type its
-   password and tap **Save**.
-4. The board connects, finds where it is, and the radar appears. Your phone
-   goes back to its normal Wi-Fi on its own.
+1. Keep the board powered. On your phone, join **AirTraffic-Setup** in Wi-Fi
+   settings, or scan the on-screen QR code to join it. It has no password.
+2. If the phone says **No Internet**, choose to **stay connected**. That is
+   expected: this hotspot is only a local setup page.
+3. If a page does not open automatically, type **http://192.168.4.1** into
+   the browser's address bar. Use `http`, not `https`, and do not search for it.
+4. Tap **Configure WiFi**, choose your **2.4 GHz** home network, enter its
+   password, and tap **Save**. Optional location/units fields are explained below.
+5. Allow up to a minute for connection, location lookup, and the first flight
+   download. The radar should appear. If your phone stays on AirTraffic-Setup
+   after setup, manually switch it back to your normal Wi-Fi.
 
-Your password is saved on the board only. It is never in the code, never on
-GitHub and never sent anywhere.
+Setup sends the password from your phone to the board over a local, open Wi-Fi
+hotspot and HTTP page. Do this at home. The board stores the credentials for
+reconnecting; the application does not send them to flight-data services or
+put them in your repository.
 
-## The optional boxes on the setup page
+## Location and units
 
-- **Latitude / Longitude** — leave blank and the radar works out where it is
-  from your internet connection (usually within a few miles, good enough).
-  Type your exact coordinates (from Google Maps: right-click ▸ the numbers at
-  the top) if you want the centre of the radar to be your actual house.
-- **Units** — `aviation` (feet, knots, nautical miles, what pilots use) or
-  `metric` (metres, km/h). You can change this later on the screen too.
+- **Latitude / Longitude:** leave **both** blank for an approximate location
+  based on your public internet address. This may be many miles away, especially
+  with a VPN or mobile internet. Check the place shown at the top of the radar.
+- For an exact radar centre, enter **both** coordinates as decimal numbers:
+  latitude first (−90 to 90), longitude second (−180 to 180). For example,
+  `32.7763` and `-79.9311`. Use a decimal point and a minus sign for south/west;
+  do not include degree symbols, compass letters, or a comma in either box.
+  In Google Maps on a computer, right-click a location to see its coordinates.
+- A missing or invalid coordinate makes the current firmware use **automatic
+  location**. There is no form error message, so confirm the centre afterward.
+- **Units:** enter `aviation` (feet, knots, nautical miles) or `metric`
+  (metres, km/h, kilometres). Settings on the display can also change this.
+  The RANGE button's underlying choices remain 10, 25, 50, and 100 **NM**.
+
+To reopen setup later: press and hold on the radar/list/card, tap
+**Wi-Fi & location**, then join AirTraffic-Setup again. Selecting your network
+and tapping Save applies the new fields. If you choose Exit without saving,
+restart the board if needed to return to its saved connection.
+
+## First success check
+
+Open **Tools ▸ Serial Monitor** in Arduino IDE. Set **115200 baud** and choose
+**New Line** in the line-ending selector. Type `status` into the input box
+and press Return. Commands need a line ending; **No line ending** will not work.
+
+Look for **Wi-Fi connected**, **feed: live**, and source **adsb.lol** or
+**adsb.fi**. A live feed with zero nearby aircraft is still a successful build.
+The green/live indicator confirms a successful download, not complete coverage.
+
+Unplug USB for a few seconds and reconnect it. The board should reconnect
+using the saved network. This is the final check that setup was saved.
+
+## Try the demo, even before setting up Wi-Fi
+
+With AirTraffic running, send `demo` in Serial Monitor (115200 baud,
+**New Line**). Wait a few seconds for the radar to appear with **Demo mode** shown.
+Tap RANGE until it is **50 NM** to see the full initial set of 14 simulated
+planes. At smaller ranges, some are deliberately outside the view.
+
+Demo includes simulated routes and aircraft facts. Photos are absent and
+logos still need internet. Send `demo` again to return to live data, or press
+RST to restart; demo mode is not saved. With no working Wi-Fi, live data must
+wait for setup. Demo mode is a useful check when there are no real planes nearby.
 
 ## Using the radar
 
 ![Radar](images/radar.png)
 
-| Do this                        | To get                                              |
-|--------------------------------|-----------------------------------------------------|
-| Tap a plane                    | Its flight card: where it's going, how high, how fast |
-| Swipe **down** on the card     | Close the card                                      |
-| Swipe **left/right** on the card | Next / previous plane                              |
-| Swipe **left** on the radar    | The list of all nearby flights                      |
-| Swipe **right** on the list    | Back to the radar                                   |
-| Tap **RANGE**                  | Zoom: 10, 25, 50 or 100 nautical miles              |
-| **Press and hold** anywhere    | Settings: units, 12/24h clock, Wi-Fi                |
+| Do this | Result |
+|---|---|
+| Tap a plane | Open its flight card |
+| Swipe **down** on the card | Close the card |
+| Swipe **left / right** on the card | Next / previous plane, ordered by distance |
+| Swipe **left** on the radar | Open the nearby-flight list |
+| Swipe **right** on the list | Return to radar |
+| Swipe **up / down** on the list | Scroll the list |
+| Tap a list row | Open that plane's card |
+| Tap **RANGE** on the radar | Cycle 10 → 25 → 50 → 100 nautical miles |
+| **Press and hold** on radar/list/card | Settings: units, 12/24-hour display, Wi-Fi/location |
 
-Leave it alone for a minute and it turns into a desk display, showing the
-nearest planes' cards one after another. Touch it to take control again.
+After **one minute without touching the radar**, desk mode cycles through up
+to the five nearest planes, one card every **12 seconds**. Touch once to leave
+desk mode; that first touch wakes the display instead of selecting a control.
+It does not start from the list or while Settings is open.
 
-## Colours mean altitude
+## What the data means
 
-| Colour  | Altitude              |
-|---------|-----------------------|
-| grey    | on the ground         |
-| orange  | below 1,000 ft        |
-| yellow  | below 5,000 ft        |
-| green   | below 15,000 ft       |
-| cyan    | below 30,000 ft       |
-| purple  | cruising above 30,000 ft |
+| Colour | Reported altitude |
+|---|---|
+| Grey | On the ground |
+| Orange | Below 1,000 ft |
+| Yellow | 1,000 to below 5,000 ft |
+| Green | 5,000 to below 15,000 ft |
+| Cyan | 15,000 to below 30,000 ft |
+| Purple | 30,000 ft or higher |
 
-A plane pulsing **red** is squawking an emergency code (7500, 7600 or 7700).
-That's rare, and usually a test or a mistake, but it's real data.
+Altitude colours use feet even in metric mode. A missing altitude can also
+appear orange; check the card rather than assuming it is low. Red pulses mark
+reported squawk codes 7500, 7600, or 7700. The demo intentionally includes one.
 
-## Something not right?
+This is a hobby display, not an air-traffic-control or navigation instrument.
+Community coverage varies; some aircraft, routes, logos, and photos will be
+missing. Up to **60 nearest reported aircraft** are retained per download.
+Positions between downloads and route progress are estimates, and downloaded
+reports may already be delayed. Missing details do not mean your build failed.
 
-Open **Tools ▸ Serial Monitor** (115200 baud) and type `status`. It tells you
-which Wi-Fi access point the board is on, how strong the signal is, and what
-the flight feed is doing. `help` lists the other commands.
+The clock gets its time from NTP and its time-zone offset from the public-IP
+lookup, even when radar coordinates are manual. It does not follow the time
+zone of coordinates you enter, and the offset does not automatically update
+at a daylight-saving change. Restart afterward to refresh it. If the location
+service is unavailable with manual coordinates, the clock uses UTC.
 
-## No Wi-Fi handy? Try the demo
-
-Open **Tools ▸ Serial Monitor** (115200 baud), type `demo` and press Enter. The
-radar fills with 14 pretend planes so you can play with every screen. Type `demo`
-again to go back to live data.
+**Something wrong?** Start with [Troubleshooting](troubleshooting.md).
 
 Next: [5. How it works](05-how-it-works.md)

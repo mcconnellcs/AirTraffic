@@ -1,5 +1,7 @@
 // Pure rules for settings (no hardware needed, so they're unit-tested in test/).
 #include <stdlib.h>
+#include <math.h>
+#include <ctype.h>
 
 #include "app_settings.h"
 
@@ -9,9 +11,10 @@ bool parseCoordinate(const char* text, double minValue, double maxValue, double*
   if (text == nullptr || *text == '\0') return false;
   char* end = nullptr;
   const double value = strtod(text, &end);
-  while (end && *end == ' ') end++;
-  if (end == text || (end && *end != '\0')) return false;
-  if (value < minValue || value > maxValue) return false;
+  if (end == text) return false;  // includes whitespace-only fields
+  while (*end && isspace(static_cast<unsigned char>(*end))) end++;
+  if (*end != '\0') return false;
+  if (!isfinite(value) || value < minValue || value > maxValue) return false;
   *out = value;
   return true;
 }

@@ -2,8 +2,8 @@
 
 <p align="center">
   A personal flight radar for your desk, on a touchscreen.<br>
-  Every aircraft near you, live, with a proper radar sweep, contrails and a
-  card that tells you where each plane is going.<br>
+  Nearby aircraft from community flight feeds, with a radar sweep, contrails,
+  and flight cards with routes when available.<br>
   No server, no subscription, no API keys, no passwords in the code.
 </p>
 
@@ -27,13 +27,13 @@
 - **Radar view.** Planes within 10–100 nautical miles of you, drawn on a
   sweeping scope with range rings, compass, fading contrails and name tags.
   Colour = altitude. Emergencies pulse red. New arrivals "ping".
-- **Smooth motion.** Positions arrive every 10 seconds; the radar predicts
-  where each plane is in between (dead reckoning) and blends in each real
-  update, so nothing jumps. 30 frames per second.
-- **Tap a plane** for its card: airline logo, callsign, airline, aircraft type and
-  registration, route with a live progress bar (Charlotte → New York, 62%),
+- **Smooth motion.** Downloads repeat after a 10-second pause; the radar
+  estimates motion between reports (dead reckoning) and blends in updates.
+  Rendering targets about 30 frames per second; actual performance varies.
+- **Tap a plane** for its card: callsign, aircraft type and registration, plus
+  airline, logo, and route when available, with an estimated progress bar,
   altitude with climb/descent arrow, speed, distance and direction, heading,
-  squawk, and a photo of the actual aircraft when one exists.
+  squawk, and an aircraft photo when available from the supported source.
 - **Nearby flights list**, nearest first, with routes.
 - **Desk mode.** Leave it alone and it cycles through the nearest planes' cards.
 - **Settings on the screen**: aviation or metric units, 12/24 h clock, Wi-Fi setup.
@@ -43,23 +43,40 @@
 - **Free data**, straight from the community ADS-B feeds
   [adsb.lol](https://adsb.lol) and [adsb.fi](https://adsb.fi) (automatic
   failover), routes and aircraft facts from [adsbdb.com](https://adsbdb.com).
-- **Demo mode** with 14 pretend planes, so you can try everything before Wi-Fi.
+- **Demo mode** with 14 simulated planes and routes. Set RANGE to 50 NM to
+  see the full initial set; photos are absent and logos still need internet.
 
-## Quick start
+## Start here — first build on a Mac
 
-1. **Get the board:** an **ESP32-4848S040** (4.0" 480×480, ESP32-S3, 16 MB flash,
-   8 MB PSRAM). About $20 from AliExpress or Amazon (search "ESP32-S3 4.0 inch
-   480x480 AITRIP"). Plus a USB-C **data** cable.
-2. **Install** Arduino IDE 2, the ESP32 core 3.3.x and three libraries —
-   [step-by-step guide](docs/02-install-arduino.md).
-3. **Flash** `firmware/BoardTest` to check the screen, then `firmware/AirTraffic`
-   — [guide](docs/03-flash-it.md). Tools menu: *ESP32S3 Dev Module · 16MB ·
-   16M Flash (3MB APP/9.9MB FATFS) · **OPI PSRAM***.
-4. **Join the `AirTraffic-Setup` Wi-Fi** from your phone, pick your home
-   network, done — [guide](docs/04-first-boot.md).
+No coding experience or Terminal commands are needed for the main build.
+You will install Arduino IDE, upload a screen test, then upload the radar.
+Allow an afternoon, including downloads. Use the **same ESP32-4848S040C_I
+board** as the working project; similarly named displays can have different wiring.
 
-No Arduino IDE? Each [release](https://github.com/mcconnellcs/AirTraffic/releases)
-has a ready-made `AirTraffic.ino.merged.bin` you can flash with `esptool`.
+1. [Check the board, Mac, USB data cable, and 2.4 GHz Wi-Fi](docs/01-what-you-need.md).
+2. [Install Arduino IDE and the exact tested dependencies](docs/02-install-arduino.md):
+   **ESP32 3.3.12**, **LovyanGFX 1.2.30**, **ArduinoJson 7.4.3**,
+   **WiFiManager 2.0.17**. The guide lists every important Tools setting.
+3. [Download/unzip the project and upload BoardTest, then AirTraffic](docs/03-flash-it.md).
+   Check the colours, animation, and touch **before** continuing past BoardTest.
+4. [Connect Wi-Fi and check the radar](docs/04-first-boot.md). Try `demo` if
+   no real aircraft are nearby, then restart to check saved Wi-Fi reconnects.
+
+**Success looks like:** BoardTest passes, AirTraffic responds to touch,
+`status` reports a live feed (even if empty), and Wi-Fi reconnects after unplugging.
+If a checkpoint fails, use [Troubleshooting](docs/troubleshooting.md).
+
+Live data depends on internet access and volunteer receiver coverage. It does
+not show every aircraft; up to 60 nearest reported aircraft are retained per
+fetch. Location from an IP address may be far from your home; enter coordinates
+if needed. Routes, photos, and logos are optional, and motion/progress are
+estimates. This is a hobby display, not a navigation instrument.
+
+The [validation record and hardware checklist](docs/validation.md) distinguish
+software checks from checks still needed on the physical board. Ready-made
+[release firmware](https://github.com/mcconnellcs/AirTraffic/releases) is an
+[optional alternative](docs/03-flash-it.md#ready-made-firmware-optional-alternative)
+and can be older than the source on `main`.
 
 ## The guides
 
@@ -70,7 +87,7 @@ Written for someone building their first ESP32 project.
 3. [Flash it](docs/03-flash-it.md)
 4. [First boot and Wi-Fi](docs/04-first-boot.md) — also how to use the radar
 5. [How it works](docs/05-how-it-works.md) — ADS-B, JSON, two cores, dead reckoning, strips
-6. [Level-up missions](docs/06-level-up-missions.md) — 13 things to change, from easy to hard
+6. [Level-up missions](docs/06-level-up-missions.md) — ideas to try after the basic build works
 7. [Troubleshooting](docs/troubleshooting.md)
 
 ## Using it
@@ -84,41 +101,41 @@ Written for someone building their first ESP32 project.
 | Tap RANGE                      | 10 → 25 → 50 → 100 NM                         |
 | Press and hold                 | Settings                                      |
 
-**Serial console** (Tools ▸ Serial Monitor, 115200 baud): `status` (Wi-Fi,
+**Serial console** (Tools ▸ Serial Monitor, 115200 baud, **New Line**): `status` (Wi-Fi,
 feed and memory), `scan` (every Wi-Fi network the board can see), `demo`
 (pretend planes on/off), `shot` (screenshot, see below), `tap X Y`,
 `swipe left|right|up|down`, `hold` (drive the screen from the keyboard), `help`.
 
-**Screenshots:** `pip install pyserial pillow`, then
-`python3 tools/screenshot.py /dev/ttyUSB0 radar.png` (use your port; add
-`--reset 1.5` to catch the start-up animation).
+**Screenshots and optional developer commands:** see
+[Developer tools](docs/development.md). These are not needed to build the radar.
 
 ## Hardware
 
-Only one board is supported, on purpose: everything in this repository is
-tested on it, and the pin wiring lives in a single commented file,
+This project targets one board. The main sketch's wiring is documented in
 [`board_config.h`](firmware/AirTraffic/board_config.h).
 
 | Board                 | Screen              | Chip     | Memory                 | Touch |
 |-----------------------|---------------------|----------|------------------------|-------|
 | ESP32-4848S040 (C_I)  | 4.0" IPS 480×480, ST7701S over 16-bit RGB | ESP32-S3 | 16 MB flash, 8 MB PSRAM | GT911 |
 
-Sold as AITRIP / Guition / Sunton "ESP32-S3 4.0 inch 480×480 display". The
-board also has 3 relay outputs and an I2C socket that this project doesn't use.
+Similar listings use AITRIP / Guition / Sunton names; match the exact model and
+components in [What you need](docs/01-what-you-need.md). BoardTest has its own
+copy of `board_config.h`; a hardware fix must be applied to both sketches.
+The relay outputs and I2C socket are not used.
 
 ## Building and testing
 
-- **Firmware:** Arduino IDE 2 with `esp32` core **3.3.12**, libraries
-  **LovyanGFX 1.2.30**, **ArduinoJson 7.4.3**, **WiFiManager 2.0.17**. CI
-  compiles with exactly these (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
-- **Command line:** `arduino-cli compile --fqbn "esp32:esp32:esp32s3:PSRAM=opi,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB" firmware/AirTraffic`
-- **Unit tests** (no board needed): `make -C test`. They cover the geo maths,
-  JSON parsers (against real saved API replies in `test/fixtures/`), number
-  formatting, animation curves, gesture detection, the dead-reckoning sky
-  model, settings rules and the demo flights. `make -C test coverage` prints
-  line coverage (about 99% of that code).
-- **Fonts:** `tools/fonts/make_fonts.py` turns the bundled TTFs into the smooth
-  bitmap fonts in `fonts_data.cpp`.
+The [installation guide](docs/02-install-arduino.md) pins the same dependency
+versions as [CI](.github/workflows/ci.yml), which compiles **both sketches**
+and runs the host tests. [Developer tools](docs/development.md) covers CLI
+setup, tests, screenshots, and fonts. No generated assets need rebuilding for
+the normal Arduino IDE path.
+
+Host tests check maths, JSON parsing, formatting, animations, gestures,
+settings, simulated flights, screenshot encoding, and Wi-Fi setup logic with
+simulated APIs. They
+do not verify real touch, display timing, USB upload, or radio behavior; use
+the [hardware checklist](docs/validation.md) for those.
 
 ## Project layout
 
@@ -150,7 +167,9 @@ tools/               screenshot.py, fonts/make_fonts.py
   [Chakra Petch](https://fonts.google.com/specimen/Chakra+Petch) (SIL Open Font License).
 
 Please be kind to the free data feeds: the refresh rate (10 s) and the 250 NM
-cap are there so one radar costs them almost nothing.
+cap limit this project's requests. Availability and access policies can change.
+See the providers' [adsb.lol API documentation](https://www.adsb.lol/docs/open-data/api/)
+and [adsb.fi API documentation](https://github.com/adsbfi/opendata).
 
 ## License
 

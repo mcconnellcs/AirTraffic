@@ -8,8 +8,8 @@ shades of "ink", producing the VLW format that LovyanGFX draws smoothly.
 
 You only need to run this if you want to change the fonts or sizes:
 
-    pip install pillow
-    python3 tools/fonts/make_fonts.py
+    See docs/development.md for virtual-environment setup, then:
+    ./.venv/bin/python tools/fonts/make_fonts.py
 
 It writes firmware/AirTraffic/fonts_data.cpp and fonts_data.h.
 """

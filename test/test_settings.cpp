@@ -7,16 +7,24 @@ TEST_CASE("parseCoordinate accepts numbers in range") {
   CHECK(v == doctest::Approx(32.7763));
   CHECK(settings::parseCoordinate("-79.93 ", -180, 180, &v));
   CHECK(v == doctest::Approx(-79.93));
+  CHECK(settings::parseCoordinate(" 40.25\t", -90, 90, &v));
+  CHECK(v == doctest::Approx(40.25));
 }
 
 TEST_CASE("parseCoordinate rejects junk and leaves the value alone") {
   double v = 1.5;
   CHECK_FALSE(settings::parseCoordinate("", -90, 90, &v));
+  CHECK_FALSE(settings::parseCoordinate("   ", -90, 90, &v));
+  CHECK_FALSE(settings::parseCoordinate("\t\n", -90, 90, &v));
   CHECK_FALSE(settings::parseCoordinate(nullptr, -90, 90, &v));
   CHECK_FALSE(settings::parseCoordinate("north", -90, 90, &v));
   CHECK_FALSE(settings::parseCoordinate("12abc", -90, 90, &v));
   CHECK_FALSE(settings::parseCoordinate("91", -90, 90, &v));
   CHECK_FALSE(settings::parseCoordinate("-181", -180, 180, &v));
+  CHECK_FALSE(settings::parseCoordinate("nan", -90, 90, &v));
+  CHECK_FALSE(settings::parseCoordinate("NaN", -180, 180, &v));
+  CHECK_FALSE(settings::parseCoordinate("inf", -90, 90, &v));
+  CHECK_FALSE(settings::parseCoordinate("-inf", -180, 180, &v));
   CHECK(v == doctest::Approx(1.5));
 }
 

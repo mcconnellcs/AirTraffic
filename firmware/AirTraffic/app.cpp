@@ -114,7 +114,8 @@ void onSettingsTap(const Gesture& g, uint32_t now) {
     case ui::SettingsAction::WifiSetup:
       ui.settingsOpen = false;
       settingsTween = anim::Tween::still(0);
-      wifisetup::startPortal();
+      feed::setDemo(false);
+      wifisetup::startPortal(settings);
       ui.screen = ui::Screen::Setup;
       ui.bootStartMs = now;
       return;
@@ -352,8 +353,15 @@ void begin() {
   Serial.begin(115200);
   Serial.println("\n=== AirTraffic ===");
 
+  if (!psramFound()) {
+    Serial.println("[app] STOP: select Tools > PSRAM > OPI PSRAM and upload again");
+    while (true) delay(1000);
+  }
   settings = settings::load();
-  display.init();
+  if (!display.init()) {
+    Serial.println("[app] STOP: display initialization failed; run BoardTest");
+    while (true) delay(1000);
+  }
   display.fillScreen(theme::kBackground);
   backlight::begin();
   backlight::set(settings.brightness);
@@ -362,7 +370,10 @@ void begin() {
   ok &= ui::initIcons();
   ok &= ui::initScreens();
   ok &= canvas.begin(&display);
-  if (!ok) Serial.println("[app] start-up problem: check PSRAM is set to 'OPI PSRAM'");
+  if (!ok) {
+    Serial.println("[app] STOP: start-up problem: check PSRAM is set to 'OPI PSRAM'");
+    while (true) delay(1000);
+  }
 
   rangeTween = anim::Tween::still(settings.rangeNm);
   ui.screen = ui::Screen::Boot;

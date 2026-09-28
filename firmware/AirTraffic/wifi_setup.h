@@ -20,7 +20,7 @@ constexpr const char* kHotspotName = "AirTraffic-Setup";
 
 void begin(const AppSettings& current);
 State process();     // call every loop()
-void startPortal();  // open the setup hotspot on purpose (from the settings menu)
+void startPortal(const AppSettings& current);  // open setup with the current choices
 
 // True once after the user saved new settings on the setup page.
 bool takeNewSettings(AppSettings* out);

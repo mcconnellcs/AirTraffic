@@ -1,10 +1,11 @@
 # 6. Level-up missions
 
-The radar works. Now make it *yours*. Each mission tells you exactly which file
-to open. Change one thing, click Upload, see what happens. That loop is how
+Finish the build and verify it works first. Save a backup of your project
+folder before experimenting. Now make it *yours*. Each mission tells you which
+file to open. Change one thing, click Upload, see what happens. That loop is how
 everyone learns this.
 
-The Serial Monitor (**Tools ▸ Serial Monitor**, 115200 baud) shows the board's
+The Serial Monitor (**Tools ▸ Serial Monitor**, 115200 baud, **New Line**) shows the board's
 messages, and typing `demo` gives you planes to look at even without Wi-Fi.
 
 ## Level 1 — Change a number
@@ -28,7 +29,7 @@ there's a limit.
 whole picture (and touch) in quarter turns: 0, 1, 2 or 3. Handy for a stand
 that holds the board sideways.
 
-**Mission 5b: A 5-mile range.** `kRangeChoicesNm` in `app_settings.h` is the
+**Mission 5b: A 5-nautical-mile range.** `kRangeChoicesNm` in `app_settings.h` is the
 list the RANGE button cycles through. Add `5` at the front.
 
 ## Level 2 — Change a behaviour
@@ -44,8 +45,8 @@ does it only matter the first time?
 
 **Mission 8: A watchlist.** In `screen_radar.cpp`, `drawBlip()` already draws
 emergency planes in red. Add your own rule: if the callsign starts with `"N"`
-(a private plane in the USA) or equals a flight your family is on, give it the
-glow treatment. `strncmp(b.track->latest.callsign, "N", 1) == 0` is a start.
+(often a U.S. registration, but not proof of private ownership) or equals a
+flight your family is on, give it the glow treatment. `strncmp(b.track->latest.callsign, "N", 1) == 0` is a start.
 
 **Mission 9: Bigger planes far away.** In `drawBlip()`, the plane is drawn with
 `planeIcon(..., b.selected ? 26 : 20, ...)`. Make the size depend on altitude
@@ -63,11 +64,13 @@ with a `drawNearest()` that shows just one plane in huge text
 (`theme::Font::Huge` is already there, up to 64 px). Add it as a third page:
 look at how `showPage()` in `app.cpp` slides between the radar and the list.
 
-**Mission 12: Your own font.** Drop a `.ttf` file into `tools/fonts/`, add a
-line to the `FONTS` table in `make_fonts.py`, run
-`python3 tools/fonts/make_fonts.py`, and use the new name in `theme.h`. Fonts
-must be free to redistribute (the ones included are under the SIL Open Font
-License).
+**Mission 12: Change an existing font.** In `tools/fonts/make_fonts.py`, find
+`font_title` in `FONTS` and change its size from 22 to 24. Follow the
+[font-tool setup](development.md#fonts) to regenerate the font data, then
+upload and check every screen for clipping. Revert the size if text no longer
+fits. Adding a *new* font is a larger task: it also needs an entry in
+`theme::Font` in `theme.h` and a matching entry in `kFontData` in `ui_fonts.cpp`.
+Only redistribute fonts whose licences allow it.
 
 **Mission 13: A case.** Search Printables or Thingiverse for
 "ESP32-4848S040 case". If you have a printer, print one; if not, a phone stand
@@ -82,8 +85,10 @@ works surprisingly well.
   card. `feed::withLogo()` already gives you the picture; how small can a logo
   go and still be recognisable? What happens to the frame rate?
 - **A map behind the radar**. OpenStreetMap serves map tiles as PNG images.
-  What would you need to draw one under the planes?
-- **Sound.** The board has no speaker, but it has spare pins…
+  Check the tile provider's usage policy and attribution requirements before
+  adding downloads. What would you need to draw one under the planes?
+- **Sound.** Check your exact board's schematic for its audio interface and
+  pins before adding a speaker; unused-looking pins may already drive the LCD.
 
 ## How to not get stuck
 
@@ -92,9 +97,11 @@ works surprisingly well.
   lines come from those files.
 - If it won't compile, read the **first** red line only. The rest is usually
   fallout from that one.
-- `git diff` (or GitHub Desktop) shows exactly what you changed since it last
-  worked. `git checkout -- filename` puts a file back.
-- The tests in `test/` are the safety net for the maths. Run `make -C test`
+- If you used Download ZIP, restore an experiment from your backup folder.
+  If you use Git, `git diff` (or GitHub Desktop) shows changes.
+  `git restore filename` discards uncommitted changes to that file; save
+  anything you want to keep before using it.
+- The tests in `test/` are the safety net for the maths. Use the [test instructions](development.md#host-tests-no-board-needed)
   after changing `geo.cpp`, `format.cpp` or `sky_model.cpp`.
 
 If you build something good, open a pull request. That's how this project grows.

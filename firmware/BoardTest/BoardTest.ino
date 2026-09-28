@@ -35,8 +35,13 @@ void setup() {
   Serial.printf("PSRAM: %u bytes free\n", ESP.getFreePsram());
   Serial.printf("Flash: %u bytes\n", ESP.getFlashChipSize());
 
+  if (!psramFound()) {
+    Serial.println("FAIL: select Tools > PSRAM > OPI PSRAM and upload again");
+    while (true) delay(1000);
+  }
   if (!display.init()) {
     Serial.println("FAIL: display.init() returned false");
+    while (true) delay(1000);
   }
   backlight::begin();
   backlight::set(200);
@@ -48,6 +53,7 @@ void setup() {
   frame.setColorDepth(16);
   if (!frame.createSprite(SCREEN_W, SCREEN_H)) {
     Serial.println("FAIL: could not make a 480x480 canvas. Is PSRAM set to 'OPI PSRAM'?");
+    while (true) delay(1000);
   }
 
   uint16_t x, y;

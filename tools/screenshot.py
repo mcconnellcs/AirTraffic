@@ -2,14 +2,13 @@
 """
 screenshot.py — save what's on the AirTraffic screen as a PNG picture.
 
-    pip install pyserial pillow
-    python3 tools/screenshot.py /dev/ttyUSB0 my-radar.png            (Linux)
-    python3 tools/screenshot.py /dev/cu.usbserial-110 radar.png       (Mac)
-    python3 tools/screenshot.py COM5 radar.png                        (Windows)
+    See docs/development.md for virtual-environment setup, then:
+    ./.venv/bin/python tools/screenshot.py /dev/ttyUSB0 my-radar.png  (Linux)
+    ./.venv/bin/python tools/screenshot.py /dev/cu.usbserial-110 radar.png (Mac)
 
 To capture the start-up animation, add --reset and how many seconds to wait:
 
-    python3 tools/screenshot.py /dev/ttyUSB0 boot.png --reset 1.2
+    ./.venv/bin/python tools/screenshot.py /dev/ttyUSB0 boot.png --reset 1.2
 
 Close the Arduino Serial Monitor first — only one program can use the port.
 """

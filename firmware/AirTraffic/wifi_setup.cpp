@@ -59,6 +59,18 @@ WiFiManagerParameter latParam("lat", "Latitude (leave blank = automatic)", latTe
 WiFiManagerParameter lonParam("lon", "Longitude (leave blank = automatic)", lonText, 15);
 WiFiManagerParameter unitsParam("units", "Units: aviation or metric", unitsText, 9);
 
+void populateParams(const AppSettings& current) {
+  settings = current;
+  latText[0] = lonText[0] = '\0';
+  if (!current.autoLocation) {
+    snprintf(latText, sizeof(latText), "%.4f", current.home.lat);
+    snprintf(lonText, sizeof(lonText), "%.4f", current.home.lon);
+  }
+  latParam.setValue(latText, 15);
+  lonParam.setValue(lonText, 15);
+  unitsParam.setValue(current.units == fmt::Units::Metric ? "metric" : "aviation", 9);
+}
+
 void onSaveParams() {
   AppSettings next = settings;
   double lat = 0, lon = 0;
@@ -83,14 +95,7 @@ void onSaveParams() {
 }  // namespace
 
 void begin(const AppSettings& current) {
-  settings = current;
-  if (!current.autoLocation) {
-    snprintf(latText, sizeof(latText), "%.4f", current.home.lat);
-    snprintf(lonText, sizeof(lonText), "%.4f", current.home.lon);
-    latParam.setValue(latText, 15);
-    lonParam.setValue(lonText, 15);
-  }
-  unitsParam.setValue(current.units == fmt::Units::Metric ? "metric" : "aviation", 9);
+  populateParams(current);
 
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);  // power saving makes the link laggy and drops HTTPS connections
@@ -118,6 +123,8 @@ void begin(const AppSettings& current) {
 
 State process() {
   manager.process();
+  // An intentional setup session stays visible even if the old Wi-Fi still works.
+  if (manager.getConfigPortalActive()) return State::Portal;
   if (WiFi.status() == WL_CONNECTED) {
     if (WiFi.RSSI() < kWeakSignalDbm && millis() - lastRoamCheckMs > kRoamCheckMs) {
       lastRoamCheckMs = millis();
@@ -135,7 +142,9 @@ State process() {
   return State::Connecting;
 }
 
-void startPortal() {
+void startPortal(const AppSettings& current) {
+  // Screen settings may have changed since boot. Preserve them when saving Wi-Fi.
+  populateParams(current);
   manager.setConfigPortalBlocking(false);
   manager.startConfigPortal(kHotspotName);
 }

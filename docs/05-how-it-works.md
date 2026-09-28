@@ -8,16 +8,17 @@ You don't need to read this to use the radar. Read it when you want to change it
 flowchart LR
     P[✈ Planes broadcast<br>position by radio<br>ADS-B] --> R[Volunteers' receivers<br>around the world]
     R --> W[(adsb.lol / adsb.fi<br>free websites)]
-    W -- "JSON every 10 s<br>over Wi-Fi" --> F[flight_feed.cpp<br>core 0]
+    W -- "JSON, about every 10+ s<br>over Wi-Fi" --> F[flight_feed.cpp<br>core 0]
     F --> S[sky_model.cpp<br>guesses positions<br>between updates]
-    S --> D[screen_radar.cpp<br>draws 30 frames/s<br>core 1]
+    S --> D[screen_radar.cpp<br>targets 30 frames/s<br>core 1]
     D --> L[480x480 LCD]
 ```
 
-Every airliner (and most small planes) carries a transmitter that shouts its
-GPS position, altitude and speed twice a second. That's called **ADS-B**.
+Many aircraft carry a transmitter that broadcasts position, altitude, and
+speed using **ADS-B**. Reception depends on the aircraft equipment and nearby
+receivers.
 Thousands of hobbyists run cheap receivers and pool what they hear on free
-websites. We ask one of those websites: *"what's flying within 30 miles of
+websites. We ask one of those websites: *"what's flying within 25 nautical miles of
 here?"* and it answers with a list.
 
 ## Step by step
@@ -37,7 +38,9 @@ the internet (NTP).
 
 ### 3. Downloading planes (`net_client.cpp`, `flight_feed.cpp`)
 
-Every 10 seconds we fetch a URL like
+After each position download we wait ten seconds before fetching again.
+Network delays can lengthen that interval. For the default 25 NM view, we use a
+slightly larger query radius to include approaching aircraft, with a URL like
 `https://api.adsb.lol/v2/point/32.77/-79.93/35` (latitude, longitude, radius).
 The reply is **JSON**, a text format that looks like this:
 
@@ -55,10 +58,10 @@ The reply is **JSON**, a text format that looks like this:
 When you open a card, the same task looks up the route and aircraft facts on
 adsbdb.com, then fetches the airline logo (a small PNG, by ICAO airline code,
 from the esp32flight-logos collection) and a photo of the aircraft. Logos are
-kept in a small cache so the same airline is only downloaded once.
+kept in a 12-entry cache to reduce repeat downloads; entries can be evicted.
 
-**Why HTTPS works without any setup:** the ESP32 core ships with the same list
-of trusted certificate authorities a web browser uses, so the board can check
+**Why HTTPS works without any setup:** the ESP32 core ships with a bundle
+of trusted certificate authorities, so the board can check
 it's really talking to adsb.lol.
 
 ### 4. Two brains (`flight_feed.cpp`, `ui_canvas.cpp`)
@@ -67,26 +70,28 @@ The ESP32-S3 has **two processor cores**. Downloading can take a second or two,
 and if we did it on the same core that draws the screen, the animation would
 freeze every 10 seconds. So:
 
-- **Core 0** runs the `flight_feed` task: Wi-Fi, downloads, JSON. It also copies
-  finished picture strips to the screen (more below).
-- **Core 1** runs Arduino's `loop()`: touch, animation, drawing.
+- **Core 0** runs `flight_feed`: downloads and JSON. A separate `strip_push`
+  task on core 0 copies finished picture strips to the screen (more below).
+- **Core 1** runs Arduino's `loop()`: Wi-Fi setup processing, touch, animation,
+  and drawing. Network scans can briefly pause this loop.
 
 They share data through a **mutex** — a lock that means "only one core may
 touch this at a time".
 
 ### 5. Filling in the gaps (`sky_model.cpp`)
 
-Positions arrive every 10 seconds but we draw 30 times a second. A jet at
-450 knots moves over a mile between updates, so if we only drew the reported
-positions, planes would teleport.
+Position downloads are roughly ten seconds apart but we target 30 frames per
+second. A jet at 450 knots moves over a mile between updates, so if we only
+drew the reported positions, planes would teleport.
 
 Instead we use **dead reckoning**, the same trick sailors used before GPS:
 
 > new position = last known position + speed × time, in the direction of travel
 
 When a fresh report arrives we blend from where we *guessed* to where the plane
-*really is* over one second, so nothing ever jumps. Planes that appear fade in,
-and planes that stop reporting fade out.
+*really is* over one second, to soften sudden position changes. Planes that
+appear fade in; planes missing from a successful download fade out. Failed
+downloads leave the last known tracks on screen, with an error indicator.
 
 ### 6. Drawing fast (`ui_canvas.cpp`)
 
@@ -143,14 +148,14 @@ motion its feel.
 
 ## Testing without a board
 
-The maths, parsers, formatting, animation and gesture code has no idea it's on
-an ESP32, so it's tested on your computer:
+The maths, parsers, formatting, animation, gesture, sky-model, settings, and
+demo code can be tested on a computer. Separate tests simulate Wi-Fi APIs to
+exercise the setup controller. The saved JSON replies in `test/fixtures/`
+check parsers without needing the live websites.
 
-```
-make -C test
-```
-
-runs 70-odd tests in a second. `test/fixtures/` holds real replies saved from
-the flight websites, so the parser is tested against the real thing.
+See [Developer tools](development.md#host-tests-no-board-needed) for the Mac
+compiler prerequisites and commands. These tests cannot prove the physical
+screen, touch, radio, or power supply works; that is what BoardTest and the
+[hardware checklist](validation.md) are for.
 
 Next: [6. Level-up missions](06-level-up-missions.md)

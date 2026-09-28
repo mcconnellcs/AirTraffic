@@ -1,121 +1,178 @@
 # Troubleshooting
 
-Start with **Tools ▸ Serial Monitor** at **115200 baud**. Nearly every problem
-below prints a clue there. Press the little **RST** button on the back of the
-board to restart it while you watch.
+Start with **Tools ▸ Serial Monitor**, **115200 baud**, and **New Line**.
+Press and release **RST** (sometimes labelled EN) to see messages from startup.
+`status` and `help` work in AirTraffic; BoardTest only prints its test report.
 
 ## Uploading
 
-**The IDE can't find a port / "No serial port selected".**
-The board's CH340 USB chip needs a driver on some computers. Install the WCH
-CH340 driver, then try a different USB cable (many only carry power) and a
-different USB socket. On Linux: `sudo usermod -a -G dialout $USER`, then log
-out and in.
+**No port appears / “No serial port selected”.**
 
-**"A fatal error occurred: Failed to connect to ESP32-S3".**
-Hold the **BOOT** button on the back, tap **RST**, release BOOT, then click
-Upload again. Drop **Tools ▸ Upload Speed** to 460800 or 115200 if it still fails.
+1. Use a known USB **data** cable. A lit screen proves power, not data.
+2. Try a direct connection, another USB socket, or a different data-capable adapter.
+3. Unplug/replug and compare **Tools ▸ Port**. On Mac choose the new
+   `/dev/cu.usbserial-…` or `/dev/cu.wchusbserial…` port, not Bluetooth.
+4. If needed, follow the official [WCH Mac driver instructions](https://github.com/WCHSoftGroup/ch34xser_macos)
+   or install [WCH's Windows driver](https://www.wch-ic.com/downloads/CH341SER_EXE.html).
+   Reopen the IDE after installation and any requested restart.
 
-**"Sketch too big" or "text section exceeds available space".**
-Tools ▸ Partition Scheme must be **16M Flash (3MB APP/9.9MB FATFS)** and
-Flash Size **16MB**.
+On Linux, a visible port with **Permission denied** may require serial-group
+access. On Debian/Ubuntu, `sudo usermod -a -G dialout "$USER"`, followed by
+logging out and back in, usually supplies it. Other distributions may use a
+different group. This command is **not for macOS**.
 
-**Errors mentioning `lgfx` or `LovyanGFX`.**
-The LovyanGFX library isn't installed, or it's a very old version. Install
-1.2.x from the Library Manager.
+**“Port busy”, “Resource busy”, or “Could not open port”.**
+Close other Serial Monitors, Terminal serial programs, and screenshot tools.
+Only one program can use the port at a time. Recheck the port after reconnecting.
+
+**Stuck at “Connecting…” / “Failed to connect to ESP32-S3”.**
+Close Serial Monitor. Hold **BOOT**, tap and release **RST**, release BOOT,
+then click Upload. Try Upload Speed **115200**. After a successful upload,
+press RST with BOOT released. Do not hold BOOT during normal startup.
+
+**“Sketch too big” / “text section exceeds available space”.**
+Set **Flash Size: 16MB (128Mb)** and **Partition Scheme: 16M Flash (3MB
+APP/9.9MB FATFS)** in the window for the sketch you are uploading.
+
+**“No such file or directory”, or errors mentioning LovyanGFX/ArduinoJson.**
+Check the [exact library and core versions](02-install-arduino.md), not just
+the library names. Keep each `.ino` with all the `.h` and `.cpp` files in its
+original folder. Open the extracted ZIP's sketch, not a copy of the `.ino`.
+If the IDE says “Multiple libraries were found”, check the **Used** path;
+remove an obsolete duplicate only after identifying it. Read the **first**
+compiler error; the final `exit status 1` is only a summary.
+
+**It uploaded, but Serial Monitor is blank / commands do nothing.**
+Select the board's port, set **115200 baud**, and press RST. **USB CDC On Boot
+must be Disabled** for this board's serial bridge; changing it requires another
+upload. Set the line-ending selector to **New Line**, type `help`, and press
+Return. AirTraffic commands are lowercase. BoardTest does not accept commands.
 
 ## The screen
 
-**Nothing on the screen, board seems dead.**
-The backlight is switched by GPIO 38 (see `backlight.h`); the firmware drives
-it as a plain on/off pin because PWM dimming did not light this board at all.
-Check the Serial Monitor. If it prints `=== AirTraffic ===`, the board runs
-and the problem is the display. Flash `firmware/BoardTest` — it shows colour
-bars with no Wi-Fi or memory tricks involved.
+**Blank screen or a “STOP” / “FAIL” message.**
+Check **OPI PSRAM** and upload again. Both sketches need PSRAM even before they
+can draw their first complete screen. The firmware stops if required startup
+resources fail; read Serial Monitor rather than waiting for the screen.
+Run BoardTest before debugging AirTraffic. Its report should show 16 MB flash
+and nonzero PSRAM. The backlight is on/off through GPIO 38, not PWM dimming.
 
-**"start-up problem: check PSRAM is set to 'OPI PSRAM'" in the Serial Monitor.**
-Exactly that: **Tools ▸ PSRAM ▸ OPI PSRAM**, then Upload again.
+**It restarts repeatedly / “Guru Meditation Error” / brownout message.**
+Recheck all [board settings](02-install-arduino.md#step-5--set-the-board-options).
+Try a short data cable and a direct computer USB port; insufficient power can
+also cause resets. If it persists, save the startup log and backtrace for an issue.
 
-**The board restarts over and over (the start-up animation keeps repeating, or
-`Guru Meditation Error` in the Serial Monitor).**
-Almost always the PSRAM setting above. If PSRAM is right, note the line after
-`Backtrace:` and open an issue on GitHub with it.
+**The picture is sideways or upside down.**
+BoardTest uses native orientation. AirTraffic uses `SCREEN_ROTATION = 3` by
+default. Change that constant in `firmware/AirTraffic/board_config.h` to
+0, 1, 2, or 3, then upload AirTraffic again. Its touch coordinates turn with it.
 
-**The picture is sideways or upside down for how the board is mounted.**
-Change `SCREEN_ROTATION` in `firmware/AirTraffic/board_config.h` (0, 1, 2 or 3
-= quarter turns) and upload again. Touch follows automatically.
+**Rows judder or jump sideways.**
+The display shares PSRAM bandwidth with other work. The tested pixel clock
+(`cfg.freq_write` in `board_config.h`) is 12 MHz. First check the power/cable
+and exact versions. For a persistent hardware-specific issue, try 11 MHz
+(`11000000`) and retest with BoardTest before changing the main app.
 
-**The picture judders or rows jump sideways now and then, worst on the left.**
-The screen is refreshed straight out of the board's PSRAM, and when that
-memory is busy (a download arriving, a big redraw) the refresh falls behind
-for a moment. The pixel clock in `board_config.h` (`cfg.freq_write`) is set to
-12 MHz, which leaves enough headroom on a tested board; if you still see it,
-try 11 MHz. Higher values look smoother on paper but judder more.
-
-**Colours are wrong (red shows as blue) or the picture is shifted.**
-Your board is a different revision. All the wiring lives in
-`firmware/AirTraffic/board_config.h`; compare it with a LovyanGFX or Arduino
-config that's known to work for your exact model.
-
-**Touch doesn't respond.**
-In BoardTest, touches print `Touch at x,y` in the Serial Monitor. If nothing
-prints, try the other I2C address in `board_config.h` (`0x14` instead of `0x5D`).
+**Wrong colours / shifted picture / no touch.**
+Confirm the exact board revision first. In BoardTest, a real touch should
+print `Touch at x,y` and move the orange dot. If not, the GT911 may use address
+`0x14` instead of `0x5D`. Try that change in
+`firmware/BoardTest/board_config.h`, upload, and test. If it works, make the
+same change in `firmware/AirTraffic/board_config.h` before uploading AirTraffic.
+Each sketch has its own copy of the hardware configuration. For other pin
+changes, get the seller's configuration for the exact board; do not guess pins.
 
 ## Wi-Fi
 
-**I can't see the `AirTraffic-Setup` network.**
-It only appears while the board has no saved Wi-Fi (or after you choose
-**Wi-Fi & location** in Settings). Restart the board and look again within a
-minute. Some phones hide networks with no internet; look under "other networks".
+**I cannot see AirTraffic-Setup.**
+On a fresh board it appears shortly after startup. If a saved network cannot
+be reached, allow roughly **30 seconds plus scanning time** for the hotspot.
+If the board is already connected, open Settings by pressing and holding on
+the radar/list/card, then choose **Wi-Fi & location**. On the phone, look at
+all networks, including ones without internet.
 
-**The setup page doesn't pop up.**
-Open a browser and type **192.168.4.1**.
+**Setup worked, then the board went back to setup.**
+Opening a serial program can restart this board through the USB bridge. Finish
+saving the phone form before opening/closing Serial Monitor or screenshot tools.
+If setup was interrupted, rejoin AirTraffic-Setup and save again. If it still
+cannot connect, check the Wi-Fi password and 2.4 GHz network, then use the log
+to distinguish a restart from a connection failure.
 
-**My Wi-Fi isn't in the list / it connects then fails.**
-The ESP32 only does **2.4 GHz**. Many routers broadcast 5 GHz and 2.4 GHz under
-one name; if the board can't join, log in to the router and give the 2.4 GHz
-network its own name. Also: very long passwords with unusual characters
-occasionally trip WiFiManager — try a simpler guest network to check.
+**The page does not pop up / the phone leaves the hotspot.**
+Stay connected despite **No Internet** and enter **http://192.168.4.1** in the
+address bar. Temporarily disable a phone VPN or automatic cellular fallback
+if it routes away from the board. Rejoin normal Wi-Fi when finished.
 
-**Everything is slow, "RETRYING" appears a lot, or `status` shows a weak signal
-even though the board is next to the router.**
-Type `status` in the Serial Monitor: it prints the access point the board is
-talking to and the signal in dBm (−30 is excellent, −70 is poor). Then type
-`scan`. Homes with more than one access point broadcast the same network name
-from each, and an ESP32 will happily talk to a far one. AirTraffic joins the
-strongest one at start-up and re-checks every 10 minutes when the signal is
-poor, so a restart usually fixes it; if `scan` only shows weak ones, move the
-board or the access point.
+**My network is missing / the password will not connect.**
+Check that the router has **2.4 GHz** enabled and that the password is exact
+(including capitals). A shared 2.4/5 GHz network name is normally fine. Move
+closer to the router. A normal WPA2-Personal home or guest network is a useful
+comparison if a school/work network requires extra authentication. Rejoin
+AirTraffic-Setup and try again; a wrong password does not require reflashing.
 
-**It was working and now says "Connecting to Wi-Fi" forever.**
-Router rebooted or password changed. Press and hold the screen ▸ **Wi-Fi &
-location** to set it up again. To wipe everything, in the IDE set
-**Tools ▸ Erase All Flash Before Sketch Upload ▸ Enabled** for one upload.
+**It was working but has lost Wi-Fi.**
+Check the router, then restart the board. If its saved network still fails,
+wait for AirTraffic-Setup and enter the current credentials. Touch controls
+are only read on the radar/list/card, so do not try long-pressing the boot
+animation. If you are on the radar, Settings can reopen setup directly.
+
+**Slow downloads or weak signal near an access point.**
+Use `status` for signal strength and `scan` for visible networks. About −30 dBm
+is strong; −70 dBm is weak. Scanning briefly pauses the UI. At startup,
+AirTraffic looks for the strongest access point with the saved name; with a
+weak connection it checks again at most every ten minutes. Restarting can
+help after moving the board.
+
+**I need to clear all settings.**
+As a last resort, set **Tools ▸ Erase All Flash Before Sketch Upload ▸ Enabled**
+for one upload of AirTraffic. This removes Wi-Fi and all saved settings. Then
+**set it back to Disabled** so future uploads do not keep erasing them.
+Use the same partition scheme as the setup guide.
 
 ## Data
 
-**"No aircraft within 25 NM" but I can see a plane out the window.**
-Small planes without ADS-B (older ones, some military) are invisible to
-everyone. Tap **RANGE** to widen the circle. Check the Serial Monitor for
-`[net]` errors — the free feeds occasionally go down for a few minutes and the
-radar keeps retrying by itself (it also switches to a second feed automatically).
+**“No aircraft” but I can see a plane.**
+A live feed can legitimately be empty. Confirm the radar centre and increase
+RANGE. Volunteer receiver coverage is incomplete; an aircraft may lack usable
+ADS-B position reports or be outside reception. Send `demo` to check the display
+with simulated aircraft. Missing planes are not proof of a bad build.
 
-**The radar is centred in the wrong place.**
-Automatic location comes from your internet provider and can be a town over.
-Type your real latitude/longitude on the setup page (**Wi-Fi & location**).
+**Wrong city / “can't find location”.**
+IP-based location can be far away or its service can be unavailable. Use
+Settings ▸ **Wi-Fi & location** and enter **both** decimal coordinates.
+Check latitude/longitude order and signs. Invalid or incomplete entries revert
+to automatic location. Manual coordinates let flight lookup proceed even when
+automatic geolocation fails.
 
-**The clock isn't shown.**
-It appears once the time has been fetched from the internet, a few seconds
-after connecting. If it never appears, your network may block NTP (port 123).
+**“RETRYING” or feed errors.**
+The board retries after a pause of about ten seconds; slow downloads can make
+it longer. Read `[net]` messages: DNS failures suggest network problems,
+HTTP 403 means access was refused, 429 means rate limiting, and 5xx indicates
+a server problem. Both feeds are external services and can be unavailable.
+Do not shorten the refresh interval to work around this. Existing positions
+may remain visible and are not fresh while errors continue.
 
-**"RETRYING" in the corner.**
-A download failed; the next one is 10 seconds later. It's only a problem if it
-stays that way — then check `[net]` lines in the Serial Monitor.
+**Missing route, photo, or airline logo.**
+These are optional lookups, not a build requirement. Many aircraft have no
+matching data. A failed detail lookup can be cached for that session; restarting
+can retry it. Demo flights have no photos; logos require internet even in demo.
+
+**Missing or incorrect clock.**
+Time is fetched via NTP (UDP port 123). A blocked network can prevent it from
+appearing. The time-zone offset comes from IP geolocation, not manual radar
+coordinates, and falls back to UTC if that lookup fails with manual coordinates.
+Restart after a daylight-saving change to refresh the offset. The 12/24-hour
+setting changes formatting only.
 
 ## Still stuck?
 
-Open an issue at <https://github.com/mcconnellcs/AirTraffic/issues> and paste:
+Ask for help at [GitHub Issues](https://github.com/mcconnellcs/AirTraffic/issues).
+Include the board model/revision, macOS/IDE versions, exact core/library
+versions, Tools settings, what happened, and the first compiler error or
+startup log. Include whether BoardTest's colour/motion/touch checks passed.
 
-- what you expected and what happened,
-- the Serial Monitor output from the restart onward,
-- your Tools menu settings.
+Before posting logs, remove passwords if present, Wi-Fi network names,
+access-point addresses, IP addresses, and home coordinates you do not want
+public. `status`, `scan`, and download URLs can reveal location/network details.
+
+[Back to the build guide](03-flash-it.md) · [Back to README](../README.md)

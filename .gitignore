@@ -12,6 +12,7 @@ test/build/
 # Python
 __pycache__/
 *.pyc
+.venv/
 
 # Never commit Wi-Fi passwords or personal settings. AirTraffic keeps them on
 # the board itself, so there should be nothing like that here anyway.

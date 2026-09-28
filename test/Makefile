@@ -17,12 +17,17 @@ SOURCES := $(SKETCH)/geo.cpp $(SKETCH)/format.cpp $(SKETCH)/parsers.cpp \
 TESTS   := $(wildcard test_*.cpp)
 
 CXXFLAGS := -std=c++17 -O0 -g -Wall -Wextra -Werror -Wno-missing-field-initializers \
-            -I$(SKETCH) -Ivendor -I$(ARDUINOJSON) -DFIXTURE_DIR=\"$(CURDIR)/fixtures\"
+            -I$(SKETCH) -Ivendor -I"$(ARDUINOJSON)" -DFIXTURE_DIR='"$(CURDIR)/fixtures"'
 
 .PHONY: test coverage clean
 
-test: $(BUILD)/tests
+test: $(BUILD)/tests $(BUILD)/wifi_setup_tests
 	./$(BUILD)/tests
+	./$(BUILD)/wifi_setup_tests
+
+$(BUILD)/wifi_setup_tests: wifi_setup/main.cpp $(wildcard wifi_setup/fakes/*.h) $(SKETCH)/wifi_setup.cpp $(SKETCH)/wifi_setup.h $(SKETCH)/settings_rules.cpp $(SKETCH)/app_settings.h
+	@mkdir -p $(BUILD)
+	$(CXX) $(CXXFLAGS) -Iwifi_setup/fakes wifi_setup/main.cpp $(SKETCH)/wifi_setup.cpp $(SKETCH)/settings_rules.cpp -o $@
 
 $(BUILD)/tests: $(SOURCES) $(TESTS) main.cpp $(wildcard $(SKETCH)/*.h)
 	@mkdir -p $(BUILD)

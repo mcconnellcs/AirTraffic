@@ -9,6 +9,7 @@
 
 #include "app.h"
 #include "flight_feed.h"
+#include "screenshot_protocol.h"
 
 namespace console {
 
@@ -22,20 +23,20 @@ size_t commandLength = 0;
 // The screen has big areas of one color, so this shrinks the data ~5-10x.
 void sendFrame() {
   const size_t total = static_cast<size_t>(SCREEN_W) * SCREEN_H;
-  Serial.printf("\nSHOT_BEGIN %d %d\n", SCREEN_W, SCREEN_H);
-  uint8_t packet[3];
-  size_t i = 0;
-  while (i < total) {
-    const uint16_t color = frame[i];
-    uint8_t run = 1;
-    while (i + run < total && frame[i + run] == color && run < 255) run++;
-    packet[0] = run;
-    packet[1] = color & 0xFF;
-    packet[2] = color >> 8;
-    Serial.write(packet, sizeof(packet));
-    i += run;
+  // One UART write holds the driver's lock for the entire image. Sending each
+  // run separately let core 0's network logs appear inside the binary data.
+  uint8_t* packet = static_cast<uint8_t*>(heap_caps_malloc(total * 3 + 64, MALLOC_CAP_SPIRAM));
+  if (packet == nullptr) {
+    Serial.println("[console] not enough memory to encode a screenshot");
+    return;
   }
-  Serial.print("\nSHOT_END\n");
+  size_t length = snprintf(reinterpret_cast<char*>(packet), 64, "\nSHOT_BEGIN %d %d\n", SCREEN_W, SCREEN_H);
+  length += screenshot::encodeRuns(frame, total, packet + length);
+  constexpr char end[] = "\nSHOT_END\n";
+  memcpy(packet + length, end, sizeof(end) - 1);
+  length += sizeof(end) - 1;
+  Serial.write(packet, length);
+  heap_caps_free(packet);
 }
 
 void startScreenshot(ui::Canvas& canvas) {
