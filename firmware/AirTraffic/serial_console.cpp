@@ -8,6 +8,7 @@
 #include <WiFi.h>
 
 #include "app.h"
+#include "app_settings.h"
 #include "flight_feed.h"
 #include "screenshot_protocol.h"
 
@@ -76,9 +77,30 @@ bool runGestureCommand(const char* cmd) {
   return false;
 }
 
+// "forget" drops only the saved Wi-Fi network; "forget all" also clears
+// location, units, clock and brightness. Either way the board restarts and,
+// with no network saved, opens the AirTraffic-Setup hotspot.
+bool runForgetCommand(const char* cmd) {
+  const bool everything = strcmp(cmd, "forget all") == 0;
+  if (!everything && strcmp(cmd, "forget") != 0) return false;
+  // WiFi.disconnect(true, true): turn Wi-Fi off and erase the saved network.
+  const bool erased = everything ? settings::eraseAll() : WiFi.disconnect(true, true);
+  if (!erased) {
+    Serial.println("[console] forget failed - nothing restarted, try again (see Troubleshooting)");
+    return true;  // handled, just unsuccessfully
+  }
+  Serial.printf("[console] forgot %s - restarting into Wi-Fi setup\n",
+                everything ? "Wi-Fi and all settings" : "the saved Wi-Fi network");
+  Serial.flush();  // let the message finish sending before the chip resets
+  ESP.restart();
+  return true;
+}
+
 void runCommand(const char* cmd, ui::Canvas& canvas) {
   if (runGestureCommand(cmd)) {
     Serial.printf("[console] ok: %s\n", cmd);
+  } else if (runForgetCommand(cmd)) {
+    // on success the board has already restarted
   } else if (strcmp(cmd, "shot") == 0) {
     startScreenshot(canvas);
   } else if (strcmp(cmd, "demo") == 0) {
@@ -105,7 +127,7 @@ void runCommand(const char* cmd, ui::Canvas& canvas) {
     }
     WiFi.scanDelete();
   } else if (strcmp(cmd, "help") == 0) {
-    Serial.println("[console] commands: status, scan, demo, shot, tap X Y, swipe left|right|up|down, hold, help");
+    Serial.println("[console] commands: status, scan, forget, forget all, demo, shot, tap X Y, swipe left|right|up|down, hold, help");
   } else if (cmd[0] != '\0') {
     Serial.printf("[console] unknown command '%s' (try: help)\n", cmd);
   }

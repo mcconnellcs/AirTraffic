@@ -82,7 +82,7 @@ Jump to: [The board](#the-board) · [Memory](#memory) ·
 | **USB CDC** | A way for a chip to appear as a serial port using its *own* USB hardware. This board uses the CH340 instead, so the setting stays off. |
 | **JTAG** | A debugging connection for professionals. Not used here. |
 | **Restart** | Unplug the USB cable, wait two seconds, and plug it back in. The program starts again from the beginning. |
-| **RST** and **BOOT** | Two tiny buttons on the bare board, inside the enclosure in this build. RST restarts the chip; BOOT, held during a restart, puts it in *download mode*, ready for a new program. The uploader "presses" both electronically, so you never need them. |
+| **Download mode** | A state where the chip waits to receive a new program over USB instead of starting the old one. The uploader switches the board into it automatically. |
 | **Line ending** | The invisible "Return" character sent after what you type, so the board knows the command is finished. |
 
 ## Wi-Fi and the internet

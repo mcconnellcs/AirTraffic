@@ -32,7 +32,7 @@ namespace settings {
 
 AppSettings load();
 void save(const AppSettings& s);
-void eraseAll();  // forget everything, including Wi-Fi
+bool eraseAll();  // forget everything, including Wi-Fi; false if anything failed
 
 // Validates text typed into the setup page. Returns false if it isn't a number
 // in range, leaving `out` untouched.

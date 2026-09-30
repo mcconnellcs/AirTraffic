@@ -112,7 +112,9 @@ navigating by map simple: one degree north is always 60 NM.
 To reopen setup later: press and hold on the radar/list/card, tap
 **Wi-Fi & location**, then join AirTraffic-Setup again. Selecting your network
 and tapping Save applies the new fields. If you choose Exit without saving,
-restart the board if needed to return to its saved connection.
+restart the board if needed to return to its saved connection. To make the
+board forget its saved network completely, send `forget` in Serial Monitor
+(see [Troubleshooting](troubleshooting.md#wi-fi)).
 
 ## First success check
 

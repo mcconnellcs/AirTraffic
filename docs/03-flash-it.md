@@ -90,10 +90,9 @@ tracks touches across the screen. If any check fails, stop here and use
 
 ### If upload stops at “Connecting…”
 
-Other ESP32 guides say to press the board's **BOOT** and **RST** buttons here.
-In this build those buttons are inside the enclosure, and you don't need
-them: the uploader presses them for you electronically (see *Learn more*
-below). Work through these instead, clicking **Upload** after each one:
+The uploader restarts the board into download mode by itself (see *Learn
+more* below), so there is nothing to press on the board. Work through these,
+clicking **Upload** after each one:
 
 1. Close Serial Monitor and any other program using the board's port
    (another IDE window, the screenshot tool).
@@ -105,8 +104,6 @@ below). Work through these instead, clicking **Upload** after each one:
 
 Still stuck? Go through [Troubleshooting](troubleshooting.md#uploading) before
 anything else: the cause is almost always the cable, the port, or a setting.
-Opening the enclosure to reach the buttons is a last resort for an adult,
-with the USB cable unplugged first.
 
 <details>
 <summary><b>Learn more:</b> how the uploader restarts the board for you</summary>
@@ -120,11 +117,11 @@ mode*). It decides by checking one pin, **IO0**, at the moment of reset.
 - **IO0** decides what happens next. Held low during the reset, it tells the
   bootloader "wait for a new program".
 
-The bare board has two tiny buttons wired to these pins, **RST** and
-**BOOT**, but in this build they are inside the enclosure. You never need
-them: the CH340 chip has two spare control lines, and the uploader uses them
-to "press" both buttons electronically. That is what
-`Hard resetting via RTS pin…` means at the end of an upload. It is also why
+The CH340 chip has two spare control lines wired to these pins, and the
+uploader uses them to set both automatically: it holds IO0 low, pulses EN to
+restart the chip into download mode, sends the program, then pulses EN again
+to start it. That last step is what `Hard resetting via RTS pin…` means at
+the end of an upload. It is also why
 unplugging and replugging the USB cable is a complete restart: the cable is
 the board's only power.
 

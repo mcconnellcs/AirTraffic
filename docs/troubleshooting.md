@@ -4,8 +4,7 @@ Start with **Tools ▸ Serial Monitor**, **115200 baud**, and **New Line**.
 To see messages from startup, leave Serial Monitor open and click **Upload**
 again: the board restarts and Serial Monitor reconnects. (Unplugging and
 replugging USB also restarts it, but the first lines can be missed while the
-port reconnects.) The board's buttons are inside the enclosure; no step here
-needs them.
+port reconnects.)
 `status` and `help` work in AirTraffic; BoardTest only prints its test report.
 Unfamiliar word? See the [glossary](glossary.md).
 
@@ -44,9 +43,8 @@ Only one program can use the port at a time. Recheck the port after reconnecting
 Close Serial Monitor and anything else using the port. Set Upload Speed to
 **115200**. Unplug USB, wait two seconds, plug it back in, recheck
 **Tools ▸ Port**, and click Upload straight away. Plug directly into the Mac
-(no hub or dock) and try another data cable. You don't need the BOOT/RST
-buttons (they are inside the enclosure); the uploader works them
-electronically. See [Flash it](03-flash-it.md#if-upload-stops-at-connecting).
+(no hub or dock) and try another data cable. The uploader restarts the board
+into download mode by itself. See [Flash it](03-flash-it.md#if-upload-stops-at-connecting).
 
 **“Sketch too big” / “text section exceeds available space”.**
 Set **Flash Size: 16MB (128Mb)** and **Partition Scheme: 16M Flash (3MB
@@ -144,8 +142,15 @@ AirTraffic looks for the strongest access point with the saved name; with a
 weak connection it checks again at most every ten minutes. Restarting can
 help after moving the board.
 
-**I need to clear all settings.**
-As a last resort, set **Tools ▸ Erase All Flash Before Sketch Upload ▸ Enabled**
+**I want the board to forget its Wi-Fi (new router, new house).**
+In Serial Monitor (115200 baud, **New Line**), send `forget`. The board erases
+the saved network, restarts, and opens AirTraffic-Setup so you can pick a new
+one. Your location, units and clock choices are kept.
+
+**I need to clear all settings (for example, giving the board to someone new).**
+Send `forget all` in Serial Monitor. Plain `forget` would keep your location. It erases the saved Wi-Fi *and* the
+location, units, clock and brightness, then restarts into AirTraffic-Setup,
+like a brand-new board. If the console cannot be reached, as a last resort set **Tools ▸ Erase All Flash Before Sketch Upload ▸ Enabled**
 for one upload of AirTraffic. This removes Wi-Fi and all saved settings. Then
 **set it back to Disabled** so future uploads do not keep erasing them.
 Use the same partition scheme as the setup guide.

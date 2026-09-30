@@ -124,7 +124,8 @@ Written for someone building their first ESP32 project.
 | Press and hold                 | Settings                                      |
 
 **Serial console** (Tools ▸ Serial Monitor, 115200 baud, **New Line**): `status` (Wi-Fi,
-feed and memory), `scan` (every Wi-Fi network the board can see), `demo`
+feed and memory), `scan` (every Wi-Fi network the board can see), `forget` (erase the saved
+Wi-Fi and restart into setup; `forget all` also resets location, units and clock), `demo`
 (pretend planes on/off), `shot` (screenshot, see below), `tap X Y`,
 `swipe left|right|up|down`, `hold` (drive the screen from the keyboard), `help`.
 

@@ -22,8 +22,8 @@ computer, network, or future dependency release.
 - Exact dependency versions and Mac install/port/USB settings replace broad
   version ranges and unspecified defaults.
 - The build guide now explains ZIP extraction, complete sketch folders,
-  verify versus upload, upload recovery that never needs the BOOT/RST buttons
-  (they are inside the enclosure), and success checkpoints.
+  verify versus upload, upload recovery using only the USB cable and IDE settings, and success
+  checkpoints.
 - Serial commands explicitly require a newline. Ready-made firmware instructions
   use esptool 5 syntax in a Python virtual environment and explain image offsets
   and settings erasure.

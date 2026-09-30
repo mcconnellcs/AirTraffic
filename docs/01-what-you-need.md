@@ -145,7 +145,7 @@ Have that password ready before starting.
 ## Optional
 
 - A nonconductive stand or case that fits this exact board and leaves the USB
-  socket and buttons accessible. Keep the exposed circuit board off metal.
+  socket accessible. Keep the exposed circuit board off metal.
 - A reliable **5 V USB power supply rated for at least 1 A**, to run it without
   the computer after programming. Power this build through USB; leave the
   board's relay terminals and other connectors unused.

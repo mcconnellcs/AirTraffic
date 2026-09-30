@@ -43,12 +43,13 @@ void save(const AppSettings& s) {
   prefs.end();
 }
 
-void eraseAll() {
-  WiFi.disconnect(true, true);  // forget the saved Wi-Fi network
+bool eraseAll() {
+  const bool wifiErased = WiFi.disconnect(true, true);  // forget the saved Wi-Fi network
   Preferences prefs;
-  prefs.begin(kNamespace, false);
-  prefs.clear();
+  if (!prefs.begin(kNamespace, false)) return false;
+  const bool prefsErased = prefs.clear();
   prefs.end();
+  return wifiErased && prefsErased;
 }
 
 }  // namespace settings
