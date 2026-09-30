@@ -162,8 +162,8 @@ Tap RANGE until it is **50 NM** to see the full initial set of 14 simulated
 planes. At smaller ranges, some are deliberately outside the view.
 
 Demo includes simulated routes and aircraft facts. Photos are absent and
-logos still need internet. Send `demo` again to return to live data, or press
-RST to restart; demo mode is not saved. With no working Wi-Fi, live data must
+logos still need internet. Send `demo` again to return to live data, or
+restart the board (unplug and replug USB); demo mode is not saved. With no working Wi-Fi, live data must
 wait for setup. Demo mode is a useful check when there are no real planes nearby.
 
 ## Using the radar

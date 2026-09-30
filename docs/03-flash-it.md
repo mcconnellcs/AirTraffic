@@ -57,12 +57,15 @@ account or Git. If you already use Git, cloning the repository also works.
    **3 seconds**, then a spinning green line and an FPS number.
 6. Touch several parts of the screen. An orange dot should follow your finger.
 
-If you missed the bars, press and release **RST** to restart. BoardTest uses
+If you missed the bars, restart the board: unplug the USB cable, wait two
+seconds, and plug it back in. BoardTest uses
 the display's native orientation, so its text may face a different direction
 from AirTraffic. That alone is not a failure.
 
-Open **Tools ▸ Serial Monitor**, select **115200 baud**, and press **RST**
-again to see the report. Flash should be **16777216 bytes** (16 MB), PSRAM
+To see the report, open **Tools ▸ Serial Monitor**, select **115200 baud**,
+and click **Upload** again with Serial Monitor still open. The IDE pauses
+Serial Monitor while it uploads, restarts the board, and reconnects, so the
+report appears from its first line. Flash should be **16777216 bytes** (16 MB), PSRAM
 should be nonzero, and touching should print `Touch at x,y`. The message
 `Touch driver: OK` alone does not prove touch works; actually touch the glass.
 
@@ -76,7 +79,7 @@ should be nonzero, and touching should print `Touch at x,y`. The message
 > The program on the board sends at 115200, so Serial Monitor must listen at
 > 115200. If the two disagree you get a stream of nonsense characters, a bit
 > like playing a record at the wrong speed. Nothing is broken; change the
-> number and press RST.
+> number and upload again with Serial Monitor open to see the report.
 >
 > **Why 16777216?** Computers count in powers of two. 16 MB is
 > 16 × 1024 × 1024 bytes.
@@ -87,33 +90,43 @@ tracks touches across the screen. If any check fails, stop here and use
 
 ### If upload stops at “Connecting…”
 
-1. Close Serial Monitor and any other program using the board's port.
-2. Hold **BOOT**, press and release **RST**, then release **BOOT**.
-3. Click **Upload** again. If necessary set Upload Speed to **115200**.
-4. After a successful manual upload, press and release **RST** with BOOT
-   released so the program starts.
+Other ESP32 guides say to press the board's **BOOT** and **RST** buttons here.
+In this build those buttons are inside the enclosure, and you don't need
+them: the uploader presses them for you electronically (see *Learn more*
+below). Work through these instead, clicking **Upload** after each one:
 
-This button sequence puts the chip into its download mode; it does not erase
-settings by itself. Button labels can be **EN** instead of RST or **IO0**
-instead of BOOT. If your enclosure hides them, disconnect USB before opening it.
+1. Close Serial Monitor and any other program using the board's port
+   (another IDE window, the screenshot tool).
+2. Set **Tools ▸ Upload Speed** to **115200**. Slower is more reliable.
+3. Unplug the USB cable, wait two seconds, and plug it back in. Check that
+   **Tools ▸ Port** is still the board's port, then click **Upload** straight away.
+4. Plug straight into the Mac (no hub or dock), try another USB socket, and
+   try another cable you know carries **data**.
+
+Still stuck? Go through [Troubleshooting](troubleshooting.md#uploading) before
+anything else: the cause is almost always the cable, the port, or a setting.
+Opening the enclosure to reach the buttons is a last resort for an adult,
+with the USB cable unplugged first.
 
 <details>
-<summary><b>Learn more:</b> what BOOT and RST actually do</summary>
+<summary><b>Learn more:</b> how the uploader restarts the board for you</summary>
 
 When the ESP32 starts, the first thing to run is a tiny built-in program
 called the *bootloader*. It makes one decision: start the program stored in
 flash, or wait to receive a new one over the serial connection (*download
 mode*). It decides by checking one pin, **IO0**, at the moment of reset.
 
-- **RST** (reset, also labelled **EN**) restarts the chip, like switching it
-  off and on.
-- **BOOT** is wired to IO0. Holding it down while the chip resets tells the
+- The **reset** pin (**EN**) restarts the chip, like switching it off and on.
+- **IO0** decides what happens next. Held low during the reset, it tells the
   bootloader "wait for a new program".
 
-Normally you never touch them. The CH340 chip has two spare control lines,
-and the uploader uses them to press both buttons electronically. That is what
-`Hard resetting via RTS pin…` means at the end of an upload. The manual
-sequence is only needed when that automatic trick fails.
+The bare board has two tiny buttons wired to these pins, **RST** and
+**BOOT**, but in this build they are inside the enclosure. You never need
+them: the CH340 chip has two spare control lines, and the uploader uses them
+to "press" both buttons electronically. That is what
+`Hard resetting via RTS pin…` means at the end of an upload. It is also why
+unplugging and replugging the USB cable is a complete restart: the cable is
+the board's only power.
 
 </details>
 
@@ -174,7 +187,9 @@ actual port from the last command, then upload the test image:
 ./airtraffic-flash-env/bin/python -m esptool --chip esp32s3 --port /dev/cu.usbserial-XXXX --baud 460800 write-flash 0x0 BoardTest.ino.merged.bin
 ```
 
-Press RST and complete the colour/motion/touch checks above. Then:
+esptool restarts the board when it finishes (`Hard resetting via RTS pin…`).
+If the screen stays dark, unplug the USB cable and plug it back in. Complete
+the colour/motion/touch checks above. Then:
 
 ```sh
 ./airtraffic-flash-env/bin/python -m esptool --chip esp32s3 --port /dev/cu.usbserial-XXXX --baud 460800 write-flash 0x0 AirTraffic.ino.merged.bin
@@ -191,6 +206,6 @@ Press RST and complete the colour/motion/touch checks above. Then:
 
 Use **only the `.merged.bin` image at address `0x0`**. A plain `.ino.bin` is
 not interchangeable. A merged image also writes the intervening flash sectors,
-including the settings area; expect to set up Wi-Fi again. Press RST if it does
-not start automatically. These commands use esptool 5.4.0's
+including the settings area; expect to set up Wi-Fi again. If it does not
+start by itself, unplug the USB cable and plug it back in. These commands use esptool 5.4.0's
 [documented `write-flash` syntax](https://docs.espressif.com/projects/esptool/en/latest/esp32s3/esptool/basic-commands.html).

@@ -1,7 +1,11 @@
 # Troubleshooting
 
 Start with **Tools ▸ Serial Monitor**, **115200 baud**, and **New Line**.
-Press and release **RST** (sometimes labelled EN) to see messages from startup.
+To see messages from startup, leave Serial Monitor open and click **Upload**
+again: the board restarts and Serial Monitor reconnects. (Unplugging and
+replugging USB also restarts it, but the first lines can be missed while the
+port reconnects.) The board's buttons are inside the enclosure; no step here
+needs them.
 `status` and `help` work in AirTraffic; BoardTest only prints its test report.
 Unfamiliar word? See the [glossary](glossary.md).
 
@@ -37,9 +41,12 @@ Close other Serial Monitors, Terminal serial programs, and screenshot tools.
 Only one program can use the port at a time. Recheck the port after reconnecting.
 
 **Stuck at “Connecting…” / “Failed to connect to ESP32-S3”.**
-Close Serial Monitor. Hold **BOOT**, tap and release **RST**, release BOOT,
-then click Upload. Try Upload Speed **115200**. After a successful upload,
-press RST with BOOT released. Do not hold BOOT during normal startup.
+Close Serial Monitor and anything else using the port. Set Upload Speed to
+**115200**. Unplug USB, wait two seconds, plug it back in, recheck
+**Tools ▸ Port**, and click Upload straight away. Plug directly into the Mac
+(no hub or dock) and try another data cable. You don't need the BOOT/RST
+buttons (they are inside the enclosure); the uploader works them
+electronically. See [Flash it](03-flash-it.md#if-upload-stops-at-connecting).
 
 **“Sketch too big” / “text section exceeds available space”.**
 Set **Flash Size: 16MB (128Mb)** and **Partition Scheme: 16M Flash (3MB
@@ -54,7 +61,7 @@ remove an obsolete duplicate only after identifying it. Read the **first**
 compiler error; the final `exit status 1` is only a summary.
 
 **It uploaded, but Serial Monitor is blank / commands do nothing.**
-Select the board's port, set **115200 baud**, and press RST. **USB CDC On Boot
+Select the board's port and set **115200 baud**. **USB CDC On Boot
 must be Disabled** for this board's serial bridge; changing it requires another
 upload. Set the line-ending selector to **New Line**, type `help`, and press
 Return. AirTraffic commands are lowercase. BoardTest does not accept commands.
@@ -124,7 +131,8 @@ comparison if a school/work network requires extra authentication. Rejoin
 AirTraffic-Setup and try again; a wrong password does not require reflashing.
 
 **It was working but has lost Wi-Fi.**
-Check the router, then restart the board. If its saved network still fails,
+Check the router, then restart the board (unplug the USB cable, wait two
+seconds, plug it back in). If its saved network still fails,
 wait for AirTraffic-Setup and enter the current credentials. Touch controls
 are only read on the radar/list/card, so do not try long-pressing the boot
 animation. If you are on the radar, Settings can reopen setup directly.

@@ -81,8 +81,8 @@ Jump to: [The board](#the-board) · [Memory](#memory) ·
 | **Driver** | Software that lets the computer's operating system talk to a piece of hardware. |
 | **USB CDC** | A way for a chip to appear as a serial port using its *own* USB hardware. This board uses the CH340 instead, so the setting stays off. |
 | **JTAG** | A debugging connection for professionals. Not used here. |
-| **RST** (or **EN**) | The reset button: restarts the program from the beginning, like switching off and on. |
-| **BOOT** (or **IO0**) | A button that, held during a reset, puts the chip in *download mode*, ready to receive a new program. |
+| **Restart** | Unplug the USB cable, wait two seconds, and plug it back in. The program starts again from the beginning. |
+| **RST** and **BOOT** | Two tiny buttons on the bare board, inside the enclosure in this build. RST restarts the chip; BOOT, held during a restart, puts it in *download mode*, ready for a new program. The uploader "presses" both electronically, so you never need them. |
 | **Line ending** | The invisible "Return" character sent after what you type, so the board knows the command is finished. |
 
 ## Wi-Fi and the internet
