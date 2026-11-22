@@ -1,0 +1,64 @@
+# Publishes the browser installer (web/) to GitHub Pages together with the
+# firmware from the latest GitHub release, so anyone with Chrome or Edge can
+# flash a board without installing anything.
+#
+# Runs when:
+#   - the CI workflow finishes for a version tag (a new release was published)
+#   - something in web/ changes on main
+#   - someone presses "Run workflow" on the Actions tab
+name: Web installer
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # For CI runs, only deploy after a successful tagged (release) build.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble the site with the latest release firmware
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)
+          echo "Latest release: $tag"
+          mkdir site
+          cp -r web/. site/
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir site \
+            --pattern AirTraffic.ino.merged.bin --pattern BoardTest.ino.merged.bin
+          for m in site/manifest-*.json; do
+            jq --arg v "$tag" '.version = $v' "$m" > "$m.tmp" && mv "$m.tmp" "$m"
+          done
+          ls -l site
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

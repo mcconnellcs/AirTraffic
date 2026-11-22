@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AirTraffic Installer</title>
+  <meta name="description" content="Install the AirTraffic desk radar on an ESP32-4848S040 board straight from your browser. Nothing to download.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305090f'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%233df2c4' stroke-width='2'/%3E%3Cpath d='M16 16 L24 9' stroke='%233df2c4' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
+  <style>
+    /* Colours copied from firmware/AirTraffic/theme.h so the page looks like the radar. */
+    :root {
+      --bg: #05090f;
+      --scope: #070e16;
+      --surface: #0d1520;
+      --surface-hi: #162232;
+      --grid: #1a2c3c;
+      --text: #e8f0f8;
+      --text-dim: #8ca0b8;
+      --accent: #3df2c4;
+      --accent-deep: #0a4640;
+      --warning: #ffb547;
+      --font-display: "Chakra Petch", system-ui, sans-serif;
+      --font-body: "Inter", system-ui, sans-serif;
+      --radius: 14px;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(61, 242, 196, 0.10), transparent 55%),
+        repeating-radial-gradient(circle at 50% -10%, transparent 0 79px, var(--grid) 79px 80px),
+        var(--bg);
+      color: var(--text);
+      font: 400 1.0625rem/1.6 var(--font-body);
+      min-height: 100vh;
+    }
+    main { max-width: 680px; margin: 0 auto; padding: 56px 16px 64px; }
+    .eyebrow {
+      font: 500 0.8rem/1 var(--font-display);
+      letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent);
+    }
+    h1 {
+      font: 700 clamp(2.6rem, 1.8rem + 4vw, 4rem)/1 var(--font-display);
+      margin: 12px 0 16px; letter-spacing: -0.01em;
+    }
+    .lede { color: var(--text-dim); margin: 0 0 40px; max-width: 34em; }
+    h2 { font: 700 1.35rem/1.2 var(--font-display); margin: 0 0 8px; }
+    ol.steps { list-style: none; padding: 0; margin: 0; counter-reset: step; display: grid; gap: 18px; }
+    ol.steps > li {
+      counter-increment: step; position: relative;
+      background: var(--surface); border: 1px solid var(--grid);
+      border-radius: var(--radius); padding: 22px 22px 22px 72px;
+    }
+    ol.steps > li::before {
+      content: counter(step);
+      position: absolute; left: 20px; top: 20px;
+      width: 36px; height: 36px; border-radius: 50%;
+      display: grid; place-items: center;
+      font: 700 1.1rem/1 var(--font-display);
+      color: var(--accent); border: 1.5px solid var(--accent);
+    }
+    ol.steps > li.main { border-color: var(--accent-deep); box-shadow: 0 0 0 1px var(--accent-deep), 0 18px 40px -20px rgba(61, 242, 196, 0.35); }
+    ol.steps p { margin: 0 0 12px; color: var(--text-dim); }
+    ol.steps p:last-child { margin-bottom: 0; }
+    strong { color: var(--text); font-weight: 600; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      font: 700 1.05rem/1 var(--font-display); letter-spacing: 0.04em;
+      padding: 14px 22px; border-radius: 10px; cursor: pointer;
+      border: 1.5px solid var(--accent); background: transparent; color: var(--accent);
+      transition: transform 150ms var(--ease), background-color 150ms var(--ease), color 150ms var(--ease);
+    }
+    .btn.primary { background: var(--accent); color: var(--bg); }
+    .btn:hover { transform: translateY(-1px); background: var(--accent); color: var(--bg); }
+    .btn:active { transform: translateY(1px); }
+    .btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+    .note {
+      margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+      background: var(--surface-hi); color: var(--text-dim); font-size: 0.95rem;
+    }
+    .warn { border-left: 3px solid var(--warning); }
+    .warn strong { color: var(--warning); }
+    .unsupported { display: block; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    details { margin-top: 32px; background: var(--surface); border: 1px solid var(--grid); border-radius: var(--radius); padding: 16px 20px; }
+    summary { cursor: pointer; font: 700 1.05rem/1.4 var(--font-display); }
+    details ul { color: var(--text-dim); padding-left: 1.2em; }
+    footer { margin-top: 40px; color: var(--text-dim); font-size: 0.9rem; }
+    code { font-size: 0.9em; background: var(--surface-hi); padding: 1px 5px; border-radius: 4px; }
+    @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Desk radar · ESP32-4848S040</div>
+    <h1>Install AirTraffic</h1>
+    <p class="lede">Put the radar on your board straight from this page. No apps,
+      no code, nothing to download. It takes about five minutes.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <h2>Plug in the board</h2>
+      <p>Connect it to the Mac with a USB-C cable. Use a cable you know moves
+        <strong>data</strong>, such as one that syncs a phone. Many cheap cables
+        only carry power, and the board will never show up with one of those.</p>
+      <p>Use <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong>.
+        Safari cannot talk to USB devices.</p>
+      <p>Close the Arduino IDE if it is open, because it can hold on to the board.</p>
+    </li>
+
+    <li>
+      <h2>Optional: test the screen</h2>
+      <p>BoardTest shows red, green, blue and white bars, then a spinning line.
+        Touch the glass and an orange dot follows your finger. If this works,
+        the board and cable are good.</p>
+      <esp-web-install-button manifest="manifest-boardtest.json">
+        <button slot="activate" class="btn">Install BoardTest</button>
+        <span slot="unsupported" class="note warn unsupported"><strong>This browser can't install.</strong>
+          Open this page in Google Chrome or Microsoft Edge on a computer.</span>
+        <span slot="not-allowed" class="note warn unsupported"><strong>Not allowed here.</strong>
+          This page must be opened over https.</span>
+      </esp-web-install-button>
+    </li>
+
+    <li class="main">
+      <h2>Install the radar</h2>
+      <p>Click the button, choose the port that looks like
+        <code>usbserial</code> or <code>USB Serial</code>, then <strong>Connect</strong>
+        and <strong>Install</strong>. Keep the cable in until it says done
+        (two or three minutes).</p>
+      <esp-web-install-button manifest="manifest-airtraffic.json">
+        <button slot="activate" class="btn primary">Install AirTraffic</button>
+        <span slot="unsupported" class="note warn unsupported"><strong>This browser can't install.</strong>
+          Open this page in Google Chrome or Microsoft Edge on a computer.</span>
+        <span slot="not-allowed" class="note warn unsupported"><strong>Not allowed here.</strong>
+          This page must be opened over https.</span>
+      </esp-web-install-button>
+      <p class="note" id="version">Installs the latest release.</p>
+    </li>
+
+    <li>
+      <h2>Set up Wi-Fi from your phone</h2>
+      <p>Unplug the board and plug it back in. It shows a QR code. Scan it, or join
+        the <strong>AirTraffic-Setup</strong> Wi-Fi network, pick your home
+        <strong>2.4 GHz</strong> network and type its password. The radar appears
+        within a minute.
+        <a href="https://github.com/mcconnellcs/AirTraffic/blob/main/docs/04-first-boot.md">Full first-boot guide</a>.</p>
+    </li>
+  </ol>
+
+  <details>
+    <summary>It didn't work</summary>
+    <ul>
+      <li><strong>No port in the list:</strong> try a different cable first, then a
+        different USB port. Plug straight into the Mac, not through a hub.</li>
+      <li><strong>"Failed to connect" or it stalls at the start:</strong> unplug
+        the board, wait two seconds, plug it back in and click Install straight away.
+        You don't need the buttons inside the case; the installer presses them for
+        you electronically.</li>
+      <li><strong>"Port is busy":</strong> quit the Arduino IDE and any other program
+        using the board, then try again.</li>
+      <li><strong>Screen stays dark after installing:</strong> unplug the board, wait
+        two seconds and plug it back in.</li>
+      <li>More help: <a href="https://github.com/mcconnellcs/AirTraffic/blob/main/docs/troubleshooting.md">troubleshooting guide</a>.</li>
+    </ul>
+  </details>
+
+  <footer>
+    <p>Installing replaces whatever is on the board and clears its saved Wi-Fi,
+      so you'll set Wi-Fi up again afterwards. Want to change the code and build
+      it yourself? Follow the
+      <a href="https://github.com/mcconnellcs/AirTraffic#start-here--first-build-on-a-mac">Arduino IDE guide</a>.</p>
+  </footer>
+</main>
+<script>
+  // Show which release this page installs (the deploy workflow writes it into the manifest).
+  fetch("manifest-airtraffic.json")
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+    .then((m) => {
+      if (m.version && m.version !== "dev") {
+        document.getElementById("version").textContent = `Installs release ${m.version}.`;
+      }
+    })
+    .catch((err) => console.warn("Could not read manifest version", err));
+</script>
+</body>
+</html>

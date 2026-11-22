@@ -1,0 +1,12 @@
+{
+  "name": "AirTraffic",
+  "version": "dev",
+  "new_install_prompt_erase": false,
+  "new_install_improv_wait_time": 0,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [{ "path": "AirTraffic.ino.merged.bin", "offset": 0 }]
+    }
+  ]
+}

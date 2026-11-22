@@ -47,6 +47,22 @@ The radar, list and card show the built-in demo flights.*
 - **Demo mode** with 14 simulated planes and routes. Set RANGE to 50 NM to
   see the full initial set; photos are absent and logos still need internet.
 
+## Quickest way: install from your browser
+
+Just want the radar running? Plug the board into a computer with a USB data
+cable, open the **[AirTraffic web installer](https://mcconnellcs.github.io/AirTraffic/)**
+in Google Chrome or Microsoft Edge, and click **Install AirTraffic**. Nothing
+to download or set up; it takes about five minutes. Then
+[connect Wi-Fi](docs/04-first-boot.md). It installs the latest
+[release](https://github.com/mcconnellcs/AirTraffic/releases), so come back to
+the build guide below when you want to change the code yourself.
+
+> **Why does this work in a browser?** Chrome and Edge can talk to USB serial
+> devices through a feature called *Web Serial*. The page uses Espressif's
+> uploader (the same one the Arduino IDE runs) rewritten in JavaScript, and
+> copies a ready-made firmware file onto the board. Safari doesn't support
+> Web Serial, which is why it won't work there.
+
 ## Start here — first build on a Mac
 
 No coding experience or Terminal commands are needed for the main build.

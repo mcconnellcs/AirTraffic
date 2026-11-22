@@ -2,6 +2,11 @@
 
 *Compile* means turning code into a program. *Upload* (or *flash*) means
 copying that program to the board. Upload replaces the factory demo.
+
+> **Only want it running?** The
+> [web installer](https://mcconnellcs.github.io/AirTraffic/) flashes the latest
+> release from Chrome or Edge with no compiling. Use this guide when you want to
+> build the code yourself or change it.
 A program that lives inside a device like this is called *firmware*.
 Unfamiliar word? See the [glossary](glossary.md).
 
@@ -157,6 +162,9 @@ keeps saved settings when the flash layout is unchanged and erasing is disabled.
 Skip this section if you followed the Arduino IDE steps. It is for someone who
 wants to install a release without compiling or editing the source. A release
 can be older than the code on `main`; use the IDE route to build current changes.
+The [web installer](https://mcconnellcs.github.io/AirTraffic/) does the same job
+from Chrome or Edge without Python or Terminal; the steps below are the
+command-line equivalent.
 
 On [GitHub Releases](https://github.com/mcconnellcs/AirTraffic/releases), open
 **Assets** and download `BoardTest.ino.merged.bin` and
